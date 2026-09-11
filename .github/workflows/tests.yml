@@ -60,6 +60,22 @@ jobs:
             }
             console.log('readable', ok, 'unreadable', denied, 'of', pids.length);
           "
+          echo "--- who am i, and who owns the unresolved ones ---"
+          node -e "
+            const { readlinkSync, statSync } = require('fs');
+            const { execFileSync } = require('child_process');
+            const me = process.getuid();
+            const pids = execFileSync('/bin/ps', ['-axo','pid=']).toString().trim().split(/\s+/);
+            const owners = {};
+            let unresolved = 0;
+            for (const pid of pids) {
+              try { readlinkSync('/proc/' + pid + '/exe'); continue; } catch {}
+              unresolved++;
+              try { owners[statSync('/proc/' + pid).uid] = (owners[statSync('/proc/' + pid).uid]||0)+1; }
+              catch (e) { owners['stat-failed:' + e.code] = (owners['stat-failed:' + e.code]||0)+1; }
+            }
+            console.log('my uid', me, 'unresolved', unresolved, 'owners', JSON.stringify(owners));
+          "
 
       - name: No dependencies, and this is the pitch rather than a detail
         run: |
