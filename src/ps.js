@@ -15,6 +15,7 @@
 // So: two readings, each with exactly one variable-width field and that field last, joined on pid.
 
 import { execFileSync } from "node:child_process";
+import { readlinkSync } from "node:fs";
 
 /** Bytes of `ps` output accepted before giving up. A very large table is a gap, never a hang. */
 const MAX_OUTPUT = 16 * 1024 * 1024;
@@ -61,6 +62,28 @@ function readArgs() {
 }
 
 /**
+ * On Linux, `ps -o comm` is the command NAME, not a path — and truncated to fifteen characters at
+ * that. A registry built on resolved paths would match nothing there, silently, on a whole
+ * platform, which is the same failure the format string would have caused on macOS wearing a
+ * different hat.
+ *
+ * `/proc/<pid>/exe` is the authoritative answer and better than `ps` gives on either platform: a
+ * symlink to the binary actually executing. Unreadable for kernel threads and for other users'
+ * processes, and that is reported as a gap rather than filled in with the short name, because a
+ * short name in a field the registry treats as a path is worse than an empty one.
+ */
+function resolveViaProc(rows) {
+  if (process.platform !== "linux") return rows;
+  return rows.map((row) => {
+    try {
+      return { ...row, comm: readlinkSync(`/proc/${row.pid}/exe`) };
+    } catch {
+      return { ...row, comm: "", shortName: row.comm };
+    }
+  });
+}
+
+/**
  * Every process, joined on pid.
  *
  * A pid present in one reading and absent from the other is a process that exited between them. It
@@ -79,7 +102,7 @@ export function readTable() {
   for (const [pid, args] of byArgs) {
     if (!byComm.has(pid)) rows.push({ pid, ppid: 0, comm: "", args });
   }
-  return rows.sort((a, b) => a.pid - b.pid);
+  return resolveViaProc(rows).sort((a, b) => a.pid - b.pid);
 }
 
 /**
@@ -91,7 +114,9 @@ export function readTable() {
  * count is not stable between readings, so it is counted each time rather than asserted.
  */
 export function tableGaps(rows) {
-  const noPath = rows.filter((r) => r.comm && !r.comm.includes("/")).map((r) => r.comm);
-  const noComm = rows.filter((r) => !r.comm).map((r) => r.pid);
+  const noPath = rows
+    .filter((r) => (r.comm && !r.comm.includes("/")) || (!r.comm && r.shortName))
+    .map((r) => r.comm || r.shortName);
+  const noComm = rows.filter((r) => !r.comm && !r.shortName).map((r) => r.pid);
   return { total: rows.length, noPath: [...new Set(noPath)].sort(), noComm };
 }

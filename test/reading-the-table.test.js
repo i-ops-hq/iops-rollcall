@@ -2,7 +2,11 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { chmodSync, copyFileSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { readTable, tableGaps } from "../src/ps.js";
 import { ancestryOf } from "../src/attribute.js";
@@ -27,15 +31,35 @@ test("comm is truncated to sixteen characters unless it is the last column", () 
   assert.ok(longest(whole, 1) > 16, "comm as the last column should keep its full path");
 });
 
-test("paths containing spaces survive the reading", () => {
-  const rows = readTable();
-  const spaced = rows.filter((r) => r.comm.includes(" ") && r.comm.startsWith("/"));
+test("a path containing spaces survives the reading", async () => {
   // macOS application bundles have spaces above and below the app root, so a whitespace split
-  // could not recover them at all.
-  assert.ok(spaced.length > 0, "no spaced paths on this machine to prove the point with");
-  for (const row of spaced.slice(0, 5)) {
-    assert.ok(row.comm.startsWith("/"), row.comm);
-    assert.ok(Number.isInteger(row.pid));
+  // could not recover them at all. The first version of this asserted that such a path was already
+  // running, which is a property of the MACHINE and not of this code — true on macOS, false on a
+  // Linux runner, and it went red in CI within a minute. So the test creates the condition it
+  // tests rather than hoping to find it.
+  // The fixture differs by platform, and both halves were learned the hard way. macOS refuses to
+  // execute a COPY of a signed system binary, so the copy produced a process that never started.
+  // Linux resolves `/proc/<pid>/exe` through a symlink to the real target, so a symlink loses the
+  // spaces it was created to carry. Symlink on macOS, copy on Linux.
+  const dir = mkdtempSync(join(tmpdir(), "roll call-"));
+  const spaced = join(dir, "a node");
+  if (process.platform === "linux") {
+    copyFileSync(process.execPath, spaced);
+    chmodSync(spaced, 0o755);
+  } else {
+    symlinkSync(process.execPath, spaced);
+  }
+
+  const child = spawn(spaced, ["-e", "setTimeout(() => {}, 5000)"], { stdio: "ignore" });
+  try {
+    await sleep(400);
+    const row = readTable().find((r) => r.pid === child.pid);
+    assert.ok(row, "the spawned process was not in the table");
+    assert.ok(row.comm.includes(" "), `comm lost its spaces: ${row.comm}`);
+    assert.ok(row.comm.endsWith("a node"), row.comm);
+  } finally {
+    child.kill("SIGKILL");
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
