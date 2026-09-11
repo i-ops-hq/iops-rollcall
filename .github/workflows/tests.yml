@@ -41,6 +41,20 @@ jobs:
           /bin/ps -axo comm= | grep -c "/" || true
           echo "--- /proc/self/exe ---"
           (test -e /proc/self/exe && readlink /proc/self/exe) || echo "no /proc on this platform"
+          echo "--- args, first 5, and how many are bracketed kernel threads ---"
+          /bin/ps -axo pid=,args= | head -5 || true
+          echo "bracketed: $(/bin/ps -axo args= | grep -c '^\[' || true) of $(/bin/ps -axo args= | wc -l)"
+          echo "--- how many /proc/<pid>/exe this user can actually read ---"
+          node -e "
+            const { readlinkSync } = require('fs');
+            const { execFileSync } = require('child_process');
+            const pids = execFileSync('/bin/ps', ['-axo','pid=']).toString().trim().split(/\s+/);
+            let ok = 0, denied = 0;
+            for (const pid of pids) {
+              try { readlinkSync('/proc/' + pid + '/exe'); ok++; } catch (e) { denied++; }
+            }
+            console.log('readable', ok, 'unreadable', denied, 'of', pids.length);
+          "
 
       - name: No dependencies, and this is the pitch rather than a detail
         run: |
