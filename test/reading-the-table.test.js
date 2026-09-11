@@ -10,6 +10,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { readTable, tableGaps } from "../src/ps.js";
 import { ancestryOf } from "../src/attribute.js";
+import { signatureFor } from "../src/registry.js";
 
 test("comm is truncated to sixteen characters unless it is the last column", () => {
   // The finding that decided the whole reader, asserted against the real `ps` rather than quoted.
@@ -75,11 +76,22 @@ test("a pid in one reading and gone from the other keeps its identity", () => {
 });
 
 test("the gaps are counted from this machine, never asserted from elsewhere", () => {
-  const gaps = tableGaps(readTable());
+  const rows = readTable();
+  const gaps = tableGaps(rows);
   assert.ok(gaps.total > 0);
+
   // A handful of processes report a name and no path. The set and the count both vary between
   // machines and between readings, so the tool counts rather than claims.
-  for (const name of gaps.noPath) assert.ok(!name.includes("/"), name);
+  //
+  // The first version of this asserted that such a name never contains a slash, which is true on
+  // macOS and false on Linux: kernel threads are called things like `cpuhp/0` and `ksoftirqd/0`.
+  // The meaningful property is not the shape of the string — it is that no signature can be
+  // applied to it, which is why it is in this list at all.
+  for (const name of gaps.noPath) {
+    assert.equal(typeof name, "string");
+    assert.ok(name.length > 0);
+    assert.equal(signatureFor(name), null, `${name} is listed as unmatchable but a signature took it`);
+  }
 });
 
 test("an ancestry walk over a pid cycle fails fast instead of hanging", () => {
