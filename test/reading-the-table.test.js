@@ -8,9 +8,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { readTable, tableGaps } from "../src/ps.js";
+import { isKernelThread, readTable, tableGaps } from "../src/ps.js";
 import { ancestryOf } from "../src/attribute.js";
 import { signatureFor } from "../src/registry.js";
+import { coverage } from "../src/report.js";
 
 test("comm is truncated to sixteen characters unless it is the last column", () => {
   // The finding that decided the whole reader, asserted against the real `ps` rather than quoted.
@@ -130,4 +131,39 @@ test("a careless registry row cannot exist, and fails at import rather than in a
   for (const [why, spec] of bad) {
     assert.throws(() => new Signature(spec), undefined, why);
   }
+});
+
+test("a kernel thread is counted apart from something this could not reach", () => {
+  // On a Linux CI runner 150 of 164 processes resolve to no executable, and almost all of them are
+  // kernel threads. A kernel thread runs no executable at all, so reporting it as unreachable
+  // overstates the blind spot as badly as hiding a real one would understate it. `ps` brackets
+  // their arguments, which is how Linux itself tells them apart.
+  const rows = [
+    { pid: 2, ppid: 0, comm: "", args: "[kthreadd]", kernelThread: true },
+    { pid: 3, ppid: 2, comm: "", args: "[rcu_gp]", kernelThread: true },
+    { pid: 900, ppid: 1, comm: "", args: "/usr/sbin/something", shortName: "something" },
+    { pid: 901, ppid: 1, comm: "/usr/bin/node", args: "node x.js" },
+  ];
+  // The detection itself, not just the accounting over it. The first version of this test handed
+  // in rows already marked as kernel threads, so breaking the detector changed nothing and the
+  // test proved nothing — caught by mutating the detector and watching it stay green.
+  assert.equal(isKernelThread("[kthreadd]"), true);
+  assert.equal(isKernelThread("[rcu_gp]"), true);
+  assert.equal(isKernelThread("/usr/sbin/something --flag"), false);
+  assert.equal(isKernelThread("node -e [1,2].map(x=>x)"), false, "a bracket inside args is not a bracketed name");
+  assert.equal(isKernelThread("[]"), false);
+  assert.equal(isKernelThread(""), false);
+
+  const gaps = tableGaps(rows);
+
+  assert.equal(gaps.kernelThreads, 2);
+  assert.deepEqual(gaps.noPath, ["something"], "a kernel thread was counted as unreachable");
+  assert.equal(gaps.total, 4, "the totals still add up");
+
+  // Normalised, because the output is soft-wrapped to a terminal width and a phrase that happens
+  // to straddle a line break is still the phrase a reader reads. Asserting the raw string makes
+  // the test a hostage to the wrap column.
+  const text = coverage(gaps).replace(/\s+/g, " ");
+  assert.match(text, /kernel threads, which run no executable/);
+  assert.match(text, /not something this could not reach/);
 });

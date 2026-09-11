@@ -22,6 +22,18 @@ const MAX_OUTPUT = 16 * 1024 * 1024;
 
 /** @typedef {{pid:number, ppid:number, comm:string, args:string}} Row */
 
+/**
+ * Whether `ps` is describing a kernel thread, which runs no executable at all.
+ *
+ * Linux brackets their arguments — `[kthreadd]`, `[rcu_gp]` — and that is how Linux itself tells
+ * them apart. Exported because it is the detection, and a test that hands in a row already marked
+ * as a kernel thread checks the accounting and never the thing that decides.
+ */
+export function isKernelThread(args) {
+  const text = String(args || "").trim();
+  return text.startsWith("[") && text.endsWith("]") && text.length > 2;
+}
+
 function run(args) {
   return execFileSync("/bin/ps", args, {
     encoding: "utf8",
@@ -78,7 +90,14 @@ function resolveViaProc(rows) {
     try {
       return { ...row, comm: readlinkSync(`/proc/${row.pid}/exe`) };
     } catch {
-      return { ...row, comm: "", shortName: row.comm };
+      // A kernel thread has no executable to point at, so its absence is not a gap in what this
+      // could read — it is the whole truth about that process. On a CI runner 150 of 164 processes
+      // resolve to nothing, and counting all of them as unreachable overstates the blind spot as
+      // badly as hiding it would understate it. `ps` brackets a kernel thread's args, which is how
+      // Linux itself distinguishes them.
+      return isKernelThread(row.args)
+        ? { ...row, comm: "", kernelThread: true }
+        : { ...row, comm: "", shortName: row.comm };
     }
   });
 }
@@ -115,8 +134,16 @@ export function readTable() {
  */
 export function tableGaps(rows) {
   const noPath = rows
-    .filter((r) => (r.comm && !r.comm.includes("/")) || (!r.comm && r.shortName))
+    .filter((r) => !r.kernelThread && ((r.comm && !r.comm.includes("/")) || (!r.comm && r.shortName)))
     .map((r) => r.comm || r.shortName);
-  const noComm = rows.filter((r) => !r.comm && !r.shortName).map((r) => r.pid);
-  return { total: rows.length, noPath: [...new Set(noPath)].sort(), noComm };
+  const noComm = rows.filter((r) => !r.comm && !r.shortName && !r.kernelThread).map((r) => r.pid);
+  const kernelThreads = rows.filter((r) => r.kernelThread).length;
+  return {
+    total: rows.length,
+    noPath: [...new Set(noPath)].sort(),
+    noComm,
+    // Counted apart: a kernel thread runs no executable, so it is not something this failed to
+    // reach. Reported so the numbers add up rather than left out so they look better.
+    kernelThreads,
+  };
 }

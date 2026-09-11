@@ -138,6 +138,11 @@ export function coverage(gaps) {
   const bits = [
     `Read ${gaps.total} processes against ${SIGNATURES.length} signatures, last checked on a real machine ${CHECKED_ON}.`,
   ];
+  if (gaps.kernelThreads) {
+    bits.push(
+      `${gaps.kernelThreads} of those are kernel threads, which run no executable at all — not something this could not reach.`,
+    );
+  }
   if (gaps.noPath.length) {
     bits.push(
       `${plural(gaps.noPath.length, "process reports", "processes report")} a name and no path, so no signature can be applied to ${gaps.noPath.length === 1 ? "it" : "them"}: ${gaps.noPath.slice(0, 4).join(", ")}${gaps.noPath.length > 4 ? ", and more" : ""}.`,
