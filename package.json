@@ -1,0 +1,36 @@
+{
+  "name": "rollcall",
+  "version": "0.1.0",
+  "description": "Every AI process running on this machine, and what a stop could not reach. Zero dependencies.",
+  "type": "module",
+  "bin": {
+    "rollcall": "src/cli.js"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "SECURITY.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "ai-agents",
+    "process",
+    "security",
+    "mcp",
+    "observability",
+    "supply-chain"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/i-ops-hq/rollcall.git"
+  },
+  "homepage": "https://i-ops.dev"
+}
