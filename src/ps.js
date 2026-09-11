@@ -106,9 +106,8 @@ function resolveViaProc(rows) {
       // resolve to nothing, and counting all of them as unreachable overstates the blind spot as
       // badly as hiding it would understate it. `ps` brackets a kernel thread's args, which is how
       // Linux itself distinguishes them.
-      return isKernelThread(row.args)
-        ? { ...row, comm: "", kernelThread: true }
-        : { ...row, comm: "", shortName: row.comm };
+      if (isKernelThread(row.args)) return { ...row, comm: "", kernelThread: true };
+      return { ...row, comm: "", shortName: row.comm, notMine: denied };
     }
   });
 }

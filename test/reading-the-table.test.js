@@ -188,3 +188,14 @@ test("a path this user may not read is a different gap from a path that is not t
   assert.match(text, /1 of them belong to another user/);
   assert.match(text, /whose executable this cannot read/);
 });
+
+test("on Linux, an unresolved process owned by somebody else says so", { skip: process.platform !== "linux" && "Linux only: macOS reports a path for every process" }, () => {
+  // The accounting for this was tested with hand-built rows, which is how a version shipped where
+  // the flag was computed and never attached to the row — the clause simply never appeared, and a
+  // clause that never appears is worse than no clause, because it looks like a covered case.
+  // This runs the real reader against the real machine, where root owns most of what this user
+  // cannot inspect.
+  const gaps = tableGaps(readTable());
+  assert.ok(gaps.notMine > 0, "no unresolved process here belongs to another user; nothing to prove");
+  assert.match(coverage(gaps).replace(/\s+/g, " "), /belong to another user/);
+});
