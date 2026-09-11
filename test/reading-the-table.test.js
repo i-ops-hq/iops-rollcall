@@ -167,3 +167,24 @@ test("a kernel thread is counted apart from something this could not reach", () 
   assert.match(text, /kernel threads, which run no executable/);
   assert.match(text, /not something this could not reach/);
 });
+
+test("a path this user may not read is a different gap from a path that is not there", () => {
+  // On Linux, reading another user's /proc/<pid>/exe needs ptrace access, so running as yourself
+  // this is every process you do not own — 27 of 166 on a CI runner. "No path" without the reason
+  // reads as "it looked and found nothing", which is a different claim from "it was not allowed
+  // to look".
+  const gaps = tableGaps([
+    { pid: 1, ppid: 0, comm: "", args: "/sbin/init", shortName: "init", notMine: true },
+    { pid: 2, ppid: 0, comm: "", args: "[kthreadd]", kernelThread: true },
+    { pid: 3, ppid: 1, comm: "", args: "weird", shortName: "weird" },
+    { pid: 4, ppid: 1, comm: "/usr/bin/node", args: "node" },
+  ]);
+
+  assert.equal(gaps.notMine, 1);
+  assert.equal(gaps.kernelThreads, 1);
+  assert.deepEqual(gaps.noPath.sort(), ["init", "weird"]);
+
+  const text = coverage(gaps).replace(/\s+/g, " ");
+  assert.match(text, /1 of them belong to another user/);
+  assert.match(text, /whose executable this cannot read/);
+});

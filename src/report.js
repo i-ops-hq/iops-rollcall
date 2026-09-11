@@ -144,8 +144,11 @@ export function coverage(gaps) {
     );
   }
   if (gaps.noPath.length) {
+    const why = gaps.notMine
+      ? ` ${gaps.notMine} of them belong to another user, whose executable this cannot read.`
+      : "";
     bits.push(
-      `${plural(gaps.noPath.length, "process reports", "processes report")} a name and no path, so no signature can be applied to ${gaps.noPath.length === 1 ? "it" : "them"}: ${gaps.noPath.slice(0, 4).join(", ")}${gaps.noPath.length > 4 ? ", and more" : ""}.`,
+      `${plural(gaps.noPath.length, "process reports", "processes report")} a name and no path, so no signature can be applied to ${gaps.noPath.length === 1 ? "it" : "them"}: ${gaps.noPath.slice(0, 4).join(", ")}${gaps.noPath.length > 4 ? ", and more" : ""}.${why}`,
     );
   }
   bits.push(

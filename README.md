@@ -127,6 +127,16 @@ had. This is for work you started and want to stop.
 Exit `0` when everything it recognised is stopped or nothing was found, `1` when something is still
 running or still to look at, `2` when it could not run.
 
-macOS and Linux. Windows is not supported, and this says so rather than half-working there.
+macOS and Linux, and they are not equally covered — which the output says on every run rather than
+leaving in a footnote.
+
+macOS gives a full executable path for every process, including other users'. Linux gives a
+truncated command *name* instead, so the path comes from `/proc/<pid>/exe`, and reading that for a
+process you do not own needs ptrace access. Running as yourself on Linux, processes belonging to
+another user are counted and named as unreadable rather than silently skipped. Kernel threads are
+counted apart from both, because they run no executable at all and calling them unreachable would
+overstate the gap.
+
+Windows is not supported, and this says so rather than half-working there.
 
 Apache-2.0. Part of [I-Ops](https://i-ops.dev).

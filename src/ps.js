@@ -89,7 +89,12 @@ function resolveViaProc(rows) {
   return rows.map((row) => {
     try {
       return { ...row, comm: readlinkSync(`/proc/${row.pid}/exe`) };
-    } catch {
+    } catch (err) {
+      // Why it could not be read is part of the answer. Reading another user's `/proc/<pid>/exe`
+      // needs ptrace access, so on a Linux box running as yourself this is every process you do
+      // not own — 27 of 166 on a CI runner. Saying "no path" without saying that leaves the reader
+      // to assume the tool looked and found nothing, which is a different claim.
+      const denied = err && (err.code === "EACCES" || err.code === "EPERM");
       // A kernel thread has no executable to point at, so its absence is not a gap in what this
       // could read — it is the whole truth about that process. On a CI runner 150 of 164 processes
       // resolve to nothing, and counting all of them as unreachable overstates the blind spot as
@@ -138,10 +143,12 @@ export function tableGaps(rows) {
     .map((r) => r.comm || r.shortName);
   const noComm = rows.filter((r) => !r.comm && !r.shortName && !r.kernelThread).map((r) => r.pid);
   const kernelThreads = rows.filter((r) => r.kernelThread).length;
+  const notMine = rows.filter((r) => r.notMine).length;
   return {
     total: rows.length,
     noPath: [...new Set(noPath)].sort(),
     noComm,
+    notMine,
     // Counted apart: a kernel thread runs no executable, so it is not something this failed to
     // reach. Reported so the numbers add up rather than left out so they look better.
     kernelThreads,
