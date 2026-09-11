@@ -15,7 +15,7 @@
 // So: two readings, each with exactly one variable-width field and that field last, joined on pid.
 
 import { execFileSync } from "node:child_process";
-import { readlinkSync } from "node:fs";
+import { readlinkSync, statSync } from "node:fs";
 
 /** Bytes of `ps` output accepted before giving up. A very large table is a gap, never a hang. */
 const MAX_OUTPUT = 16 * 1024 * 1024;
@@ -89,12 +89,18 @@ function resolveViaProc(rows) {
   return rows.map((row) => {
     try {
       return { ...row, comm: readlinkSync(`/proc/${row.pid}/exe`) };
-    } catch (err) {
-      // Why it could not be read is part of the answer. Reading another user's `/proc/<pid>/exe`
-      // needs ptrace access, so on a Linux box running as yourself this is every process you do
-      // not own — 27 of 166 on a CI runner. Saying "no path" without saying that leaves the reader
-      // to assume the tool looked and found nothing, which is a different claim.
-      const denied = err && (err.code === "EACCES" || err.code === "EPERM");
+    } catch {
+      // Why it could not be read is part of the answer, and the reason is asked for directly
+      // rather than inferred from an errno. A first version keyed on EACCES/EPERM and never fired
+      // on a CI runner where 162 of 167 were unreadable — different kernels return different codes
+      // there, some ENOENT to avoid leaking that the process exists at all. The owner of
+      // `/proc/<pid>` is not ambiguous, so it is read instead of guessed.
+      let denied = false;
+      try {
+        denied = statSync(`/proc/${row.pid}`).uid !== process.getuid();
+      } catch {
+        denied = false;
+      }
       // A kernel thread has no executable to point at, so its absence is not a gap in what this
       // could read — it is the whole truth about that process. On a CI runner 150 of 164 processes
       // resolve to nothing, and counting all of them as unreachable overstates the blind spot as
