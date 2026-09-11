@@ -16,8 +16,13 @@ jobs:
       fail-fast: false
       # macOS and Linux only. Windows process trees and signals differ enough that a half-working
       # path there would break the "degrades honestly" rule in the one place it matters most.
+      # The parentheses are load-bearing. `&&` binds tighter than `||`, so without them a push
+      # short-circuits the whole expression to the boolean `true`, `fromJSON(true)` is not a list,
+      # and the run produces ZERO jobs while reporting failure — a green-looking workflow that ran
+      # nothing. It went unnoticed for one run because the run before it was a manual dispatch,
+      # which takes the other branch.
       matrix:
-        include: ${{ fromJSON(github.event_name == 'push' || github.event_name == 'pull_request'
+        include: ${{ fromJSON((github.event_name == 'push' || github.event_name == 'pull_request')
           && '[{"os":"ubuntu-latest","node":"20"},{"os":"ubuntu-latest","node":"22"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"22"}]'
           || '[{"os":"ubuntu-latest","node":"18"},{"os":"ubuntu-latest","node":"20"},{"os":"ubuntu-latest","node":"22"},{"os":"ubuntu-latest","node":"24"},{"os":"macos-latest","node":"18"},{"os":"macos-latest","node":"20"},{"os":"macos-latest","node":"22"},{"os":"macos-latest","node":"24"}]') }}
     runs-on: ${{ matrix.os }}
