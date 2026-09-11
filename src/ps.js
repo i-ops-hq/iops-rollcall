@@ -143,14 +143,21 @@ export function readTable() {
  * count is not stable between readings, so it is counted each time rather than asserted.
  */
 export function tableGaps(rows) {
-  const noPath = rows
-    .filter((r) => !r.kernelThread && ((r.comm && !r.comm.includes("/")) || (!r.comm && r.shortName)))
-    .map((r) => r.comm || r.shortName);
+  // Counted as PROCESSES and sampled as names. Reporting the deduplicated name count beside a
+  // process count of the same set produced "26 processes ... 29 of them", which is a number
+  // contradicting the one next to it — the label/count mismatch this project has caught before in
+  // three other places.
+  const unresolved = rows.filter(
+    (r) => !r.kernelThread && ((r.comm && !r.comm.includes("/")) || (!r.comm && r.shortName)),
+  );
+  const noPath = unresolved.map((r) => r.comm || r.shortName);
   const noComm = rows.filter((r) => !r.comm && !r.shortName && !r.kernelThread).map((r) => r.pid);
   const kernelThreads = rows.filter((r) => r.kernelThread).length;
   const notMine = rows.filter((r) => r.notMine).length;
   return {
     total: rows.length,
+    //: how many processes, and a sample of what they are called. Two different questions.
+    noPathCount: unresolved.length,
     noPath: [...new Set(noPath)].sort(),
     noComm,
     notMine,

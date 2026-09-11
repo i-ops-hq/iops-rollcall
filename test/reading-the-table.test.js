@@ -199,3 +199,25 @@ test("on Linux, an unresolved process owned by somebody else says so", { skip: p
   assert.ok(gaps.notMine > 0, "no unresolved process here belongs to another user; nothing to prove");
   assert.match(coverage(gaps).replace(/\s+/g, " "), /belong to another user/);
 });
+
+test("the two numbers in the coverage line count the same kind of thing", () => {
+  // "26 processes report a name and no path ... 29 of them belong to another user" shipped for one
+  // run: the first counted deduplicated names and the second counted processes, so the subset was
+  // larger than the set. A count under a label describing something else is the defect this
+  // project has now caught in four places.
+  const rows = [
+    { pid: 1, ppid: 0, comm: "", args: "x", shortName: "agetty", notMine: true },
+    { pid: 2, ppid: 0, comm: "", args: "x", shortName: "agetty", notMine: true },
+    { pid: 3, ppid: 0, comm: "", args: "x", shortName: "agetty", notMine: true },
+    { pid: 4, ppid: 0, comm: "/usr/bin/node", args: "node" },
+  ];
+  const gaps = tableGaps(rows);
+
+  assert.equal(gaps.noPathCount, 3, "three processes, however many distinct names");
+  assert.deepEqual(gaps.noPath, ["agetty"], "one name, sampled");
+  assert.ok(gaps.notMine <= gaps.noPathCount, "the subset cannot exceed the set");
+
+  const text = coverage(gaps).replace(/\s+/g, " ");
+  assert.match(text, /3 processes report a name and no path/);
+  assert.match(text, /3 of them belong to another user/);
+});
