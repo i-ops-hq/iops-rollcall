@@ -2,14 +2,18 @@
 
 **Every AI process running on this machine, and what a stop could not reach.**
 
+Published as `iops-rollcall`, and the command it installs is `rollcall`. The unprefixed name is
+refused by npm as too similar to an existing `roll-call`, which is worth saying out loud rather than
+leaving as a puzzle — and `iops-rooms` already uses the same shape.
+
 ```bash
-npx rollcall@0.1.0
+npx iops-rollcall@0.1.0
 ```
 
 Zero dependencies. Check that before you run it, in one command:
 
 ```bash
-npm view rollcall dependencies
+npm view iops-rollcall dependencies
 ```
 
 It returns `{}`. This tool exists partly because of dependency-level attacks through npm, so
@@ -20,7 +24,7 @@ whatever was published most recently, at run time, which is the attack shape thi
 ## What a first run looks like
 
 ```
-$ npx rollcall@0.1.0
+$ npx iops-rollcall@0.1.0
 
 22 processes matched, of 599 running — 1 application and 5 others.
 
@@ -46,8 +50,8 @@ everyday reason this exists, and it needs no incident.
 ## Stopping
 
 ```bash
-npx rollcall@0.1.0 stop --dry-run   # what it would signal
-npx rollcall@0.1.0 stop             # signal it, verify each one, write a record
+npx iops-rollcall@0.1.0 stop --dry-run   # what it would signal
+npx iops-rollcall@0.1.0 stop             # signal it, verify each one, write a record
 ```
 
 No confirmation prompt. A switch that asks *are you sure* during an incident is broken, and the
@@ -73,7 +77,7 @@ A process list answers what is running. It says nothing about the launchd agent 
 agent at login, or the timer that will run one at three in the morning.
 
 ```bash
-npx rollcall@0.1.0 schedules
+npx iops-rollcall@0.1.0 schedules
 ```
 
 **It reads and changes nothing.** Disabling a schedule is reversible and is deliberately not here:
@@ -128,7 +132,7 @@ The gap is stated rather than closed with guesses. Open an issue with the output
 You can also point it at your own list without waiting for that:
 
 ```bash
-npx rollcall@0.1.0 --registry ./my-agents.json
+npx iops-rollcall@0.1.0 --registry ./my-agents.json
 ```
 
 A file is an array of rows in the same shape as the built-in ones, and it goes through the same

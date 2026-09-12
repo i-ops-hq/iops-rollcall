@@ -1,6 +1,6 @@
 # Security
 
-Open a [security advisory](https://github.com/i-ops-hq/rollcall/security/advisories/new). Please do
+Open a [security advisory](https://github.com/i-ops-hq/iops-rollcall/security/advisories/new). Please do
 not open a public issue for a vulnerability.
 
 ## What this tool can do, stated plainly
@@ -30,7 +30,7 @@ Both have a control in `test/`, written before the code they guard.
 
 ## Zero dependencies, and why that is a security property here
 
-`npm view rollcall dependencies` returns `{}`. A tool that exists partly because of dependency-level
+`npm view iops-rollcall dependencies` returns `{}`. A tool that exists partly because of dependency-level
 attacks cannot ask you to audit a dependency tree before you trust it. Everything it uses is the
 Node standard library: `child_process.execFileSync` to read `/bin/ps`, and `process.kill` to signal
 and to check existence.

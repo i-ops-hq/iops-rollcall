@@ -57,8 +57,9 @@ jobs:
       - name: The README pins the version it tells people to run
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          if ! grep -q "rollcall@$VERSION" README.md; then
-            echo "::error::README does not pin rollcall@$VERSION. A bare npx resolves whatever was published last, at run time, which is the attack shape this tool is about."
+          NAME=$(node -p "require('./package.json').name")
+          if ! grep -q "$NAME@$VERSION" README.md; then
+            echo "::error::README does not pin $NAME@$VERSION. A bare npx resolves whatever was published last, at run time, which is the attack shape this tool is about."
             exit 1
           fi
 
@@ -66,9 +67,9 @@ jobs:
         id: published
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          if npm view "rollcall@$VERSION" version >/dev/null 2>&1; then
+          if npm view "$(node -p "require('./package.json').name")@$VERSION" version >/dev/null 2>&1; then
             echo "already=true" >> "$GITHUB_OUTPUT"
-            echo "rollcall@$VERSION is already published; nothing to do."
+            echo "$VERSION is already published; nothing to do."
           else
             echo "already=false" >> "$GITHUB_OUTPUT"
           fi

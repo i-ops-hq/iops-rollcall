@@ -1,10 +1,11 @@
 {
-  "name": "rollcall",
+  "name": "iops-rollcall",
   "version": "0.1.0",
   "description": "Every AI process running on this machine, and what a stop could not reach. Zero dependencies.",
   "type": "module",
   "bin": {
-    "rollcall": "src/cli.js"
+    "rollcall": "src/cli.js",
+    "iops-rollcall": "src/cli.js"
   },
   "files": [
     "src/",
