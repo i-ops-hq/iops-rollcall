@@ -14,6 +14,12 @@ are now stated per verb, because the verbs answer different questions.
 
 Both found by running the published 0.1.1 against its own README rather than by re-reading either.
 
+**The npm page linked at the old repository name.** `package.json` still pointed at
+`i-ops-hq/rollcall` after the rename, so the sidebar on npmjs.com sent readers to a redirect. The
+README references were updated at the time and this one was missed, because nothing renders
+`package.json` until the package is published — which is the same reason the dependency check went
+out claiming an output nobody had seen.
+
 # 0.1.1
 
 **The command this README told you to run to check the zero-dependency claim printed nothing.**

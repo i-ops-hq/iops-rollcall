@@ -31,7 +31,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/i-ops-hq/rollcall.git"
+    "url": "git+https://github.com/i-ops-hq/iops-rollcall.git"
   },
-  "homepage": "https://i-ops.dev"
+  "homepage": "https://i-ops.dev",
+  "bugs": {
+    "url": "https://github.com/i-ops-hq/iops-rollcall/issues"
+  }
 }
