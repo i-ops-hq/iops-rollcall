@@ -77,7 +77,7 @@ test("it reads schedules and changes none of them", async () => {
   }
 });
 
-test("a schedule naming a recognised program is reported, and is a finding", async () => {
+test("a schedule naming a recognised program is reported, and reporting is not a failure", async () => {
   const { sources } = readSchedules();
   const withProgram = sources.flatMap((s) => s.entries).find((e) => e.program);
   if (!withProgram) return; // nothing scheduled here states a path; nothing to prove
@@ -94,8 +94,8 @@ test("a schedule naming a recognised program is reported, and is a finding", asy
   );
   try {
     const result = await run(process.execPath, [CLI, "schedules", "--registry", registry]).catch((e) => e);
-    assert.match(String(result.stdout), /Fixture/);
-    assert.equal(result.code ?? 0, 1, "a recognised schedule is something to look at");
+    assert.match(String(result.stdout), /Fixture/, "the recognised schedule is named");
+    assert.equal(result.code ?? 0, 0, "a read-only verb reports; it does not fail on what it read");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -153,4 +153,20 @@ test("systemctl says more than enabled and disabled, and the rest is unknown", (
   for (const word of ["static", "indirect", "generated", "transient", "alias", ""]) {
     assert.equal(enabledFromSystemctl(word), null, word || "(empty)");
   }
+});
+
+test("a read-only verb reports and exits zero, however much it finds", async () => {
+  // `schedules` returned 1 when it recognised a scheduled program, which fires on every machine
+  // that schedules anything at all — how a check becomes a line in a CI file everybody has muted.
+  // The same mistake compiled payloads caused in the sibling dependency gate, made again here, and
+  // caught by running the published package against its own README.
+  const plain = await run(process.execPath, [CLI, "schedules"]).catch((e) => e);
+  assert.equal(plain.code ?? 0, 0, "reading and reporting is not a failure");
+
+  const listed = await run(process.execPath, [CLI, "list"]).catch((e) => e);
+  assert.equal(listed.code ?? 0, 0);
+
+  // It still exits 2 when it genuinely could not run, which is the distinction that matters.
+  const broken = await run(process.execPath, [CLI, "schedules", "--registry", "/nope/x.json"]).catch((e) => e);
+  assert.equal(broken.code, 2);
 });

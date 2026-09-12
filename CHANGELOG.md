@@ -1,3 +1,19 @@
+# 0.1.2
+
+**The first release published from CI, with a provenance attestation you can check** on the npm page
+instead of taking a paragraph's word for it. 0.1.0 and 0.1.1 went out by hand because npm can only
+accept a trusted publisher for a package that already exists.
+
+**`schedules` exited 1 whenever it recognised a scheduled program.** That fires on any machine that
+schedules anything at all, which is how a check becomes a line in a CI file everybody has muted — the
+same mistake compiled payloads caused in `assurance-deps`, made again here. A read-only verb reports
+and exits 0; only `stop` exits 1, and only when something survived it.
+
+**The README described one exit rule for every verb**, and `list` had never followed it. Exit codes
+are now stated per verb, because the verbs answer different questions.
+
+Both found by running the published 0.1.1 against its own README rather than by re-reading either.
+
 # 0.1.1
 
 **The command this README told you to run to check the zero-dependency claim printed nothing.**

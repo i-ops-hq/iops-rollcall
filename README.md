@@ -7,17 +7,17 @@ refused by npm as too similar to an existing `roll-call`, which is worth saying 
 leaving as a puzzle — and `iops-rooms` already uses the same shape.
 
 ```bash
-npx iops-rollcall@0.1.1
+npx iops-rollcall@0.1.2
 ```
 
 Zero dependencies. Check it rather than believe it:
 
 ```bash
-npm i iops-rollcall@0.1.1 && npm ls
+npm i iops-rollcall@0.1.2 && npm ls
 ```
 ```
 your-project@1.0.0
-`-- iops-rollcall@0.1.1
+`-- iops-rollcall@0.1.2
 ```
 
 Nothing beneath it. That is the whole tree.
@@ -34,7 +34,7 @@ at run time, which is the attack shape this is about.
 ## What a first run looks like
 
 ```
-$ npx iops-rollcall@0.1.1
+$ npx iops-rollcall@0.1.2
 
 22 processes matched, of 599 running — 1 application and 5 others.
 
@@ -60,8 +60,8 @@ everyday reason this exists, and it needs no incident.
 ## Stopping
 
 ```bash
-npx iops-rollcall@0.1.1 stop --dry-run   # what it would signal
-npx iops-rollcall@0.1.1 stop             # signal it, verify each one, write a record
+npx iops-rollcall@0.1.2 stop --dry-run   # what it would signal
+npx iops-rollcall@0.1.2 stop             # signal it, verify each one, write a record
 ```
 
 No confirmation prompt. A switch that asks *are you sure* during an incident is broken, and the
@@ -87,7 +87,7 @@ A process list answers what is running. It says nothing about the launchd agent 
 agent at login, or the timer that will run one at three in the morning.
 
 ```bash
-npx iops-rollcall@0.1.1 schedules
+npx iops-rollcall@0.1.2 schedules
 ```
 
 **It reads and changes nothing.** Disabling a schedule is reversible and is deliberately not here:
@@ -142,7 +142,7 @@ The gap is stated rather than closed with guesses. Open an issue with the output
 You can also point it at your own list without waiting for that:
 
 ```bash
-npx iops-rollcall@0.1.1 --registry ./my-agents.json
+npx iops-rollcall@0.1.2 --registry ./my-agents.json
 ```
 
 A file is an array of rows in the same shape as the built-in ones, and it goes through the same
@@ -171,8 +171,17 @@ had. This is for work you started and want to stop.
 | `--registry <file>` | use your own signatures instead of the built-in ones |
 | `--json` | machine-readable, for either verb |
 
-Exit `0` when everything it recognised is stopped or nothing was found, `1` when something is still
-running or still to look at, `2` when it could not run.
+Exit codes differ by verb, because the verbs answer different questions.
+
+| | |
+|---|---|
+| `list`, `schedules` | `0` — they read something and told you. Finding agents is the normal case, and exiting non-zero on it would make these unusable in a shell |
+| `stop` | `0` when everything it recognised is stopped, `1` when something survived, was refused, or is an application it left running |
+| `stop --dry-run` | `1` when there is something it would signal |
+| any of them | `2` when it could not run: no such registry file, a manifest it cannot parse, a process table it cannot read |
+
+**`stop` exiting 1 is not a failure**, it is the honest answer to "is this machine quiet now" when
+part of it is not.
 
 macOS and Linux, and they are not equally covered — which the output says on every run rather than
 leaving in a footnote.

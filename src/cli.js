@@ -89,13 +89,16 @@ async function main(argv) {
         item.label = sig ? sig.label : "";
       }
     }
-    const named = result.sources.flatMap((s) => s.entries.filter((e) => e.matched));
     process.stdout.write(
       asJsonEarly(flags)
         ? `${JSON.stringify({ verb: "schedules", sources: result.sources }, null, 2)}\n`
         : formatSchedules(result, signatures),
     );
-    return named.length ? 1 : 0;
+    // A read-only verb reports and exits 0. Returning 1 because it FOUND something fires on every
+    // machine that schedules anything recognised, which is how a check becomes a line in a CI file
+    // that everyone has muted — the same mistake compiled payloads caused in the dependency gate,
+    // made again here and caught by running the published package against its own README.
+    return 0;
   }
 
   let rows;
