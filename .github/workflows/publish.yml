@@ -4,10 +4,13 @@ name: publish
 #   1. bump "version" in package.json   2. add the CHANGELOG heading
 #   3. commit                           4. git tag v<X.Y.Z> && git push origin v<X.Y.Z>
 #
-# The first publish needs NPM_TOKEN, because npm's trusted publishing can only be configured for a
-# package that already exists — it has no pending-publisher equivalent to PyPI's. Once 0.1.0 is on
-# the registry, add a trusted publisher on npmjs.com for this repo and this workflow, delete the
-# secret, and delete the two token lines below. The npm CLI prefers OIDC when it finds it.
+# Authentication is OIDC only, and there is deliberately no NPM_TOKEN secret anywhere in this repo.
+# A long-lived publish credential sitting in a settings page is the shape of thing this tool exists
+# to report on, so the first release was published by hand instead of creating one.
+#
+# This workflow therefore does nothing until a trusted publisher is configured on npmjs.com for
+# this repository and this workflow file. That is possible only once the package exists, which is
+# why 0.1.0 went out manually and 0.1.1 will be the first with provenance.
 on:
   push:
     tags: ["v*"]
@@ -72,7 +75,7 @@ jobs:
 
       - name: Publish with provenance
         if: steps.published.outputs.already == 'false'
+        # No NODE_AUTH_TOKEN. The npm CLI detects the OIDC environment and authenticates with it,
+        # and if no trusted publisher is configured this fails loudly rather than falling back to
+        # a credential nobody meant to store.
         run: npm publish --provenance --access public
-        env:
-          # Delete this and the secret once a trusted publisher is configured on npmjs.com.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
