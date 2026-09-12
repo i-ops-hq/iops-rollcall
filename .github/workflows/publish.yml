@@ -34,6 +34,25 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
+      # Node 22 bundles npm 10.9.x, and OIDC needs 11.5.1 or later. An older npm does not say so:
+      # it quietly falls back to token authentication, finds no token, and the registry answers
+      # 404 on the upload — which reads as "the package does not exist" and sent two runs chasing
+      # a trusted-publisher config that was already correct.
+      - name: npm new enough for OIDC, checked rather than assumed
+        run: |
+          npm install -g npm@latest
+          export NPM_VERSION=$(npm --version)
+          echo "npm $NPM_VERSION"
+          node -e "
+            const [maj, min, patch] = process.env.NPM_VERSION.split('.').map(Number);
+            const ok = maj > 11 || (maj === 11 && (min > 5 || (min === 5 && patch >= 1)));
+            if (!ok) {
+              console.error('::error::npm ' + process.env.NPM_VERSION + ' cannot authenticate by OIDC; 11.5.1 or later is required. Without it the publish fails with a 404 that names the wrong problem.');
+              process.exit(1);
+            }
+          "
+
+
       - name: The tag must agree with package.json
         run: |
           VERSION=$(node -p "require('./package.json').version")
