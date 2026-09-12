@@ -67,6 +67,27 @@ state.
 with `sudo`. A switch that tells you to escalate privilege in order to kill things is the thing this
 is trying not to be.
 
+## What has not started yet
+
+A process list answers what is running. It says nothing about the launchd agent that will start an
+agent at login, or the timer that will run one at three in the morning.
+
+```bash
+npx rollcall@0.1.0 schedules
+```
+
+**It reads and changes nothing.** Disabling a schedule is reversible and is deliberately not here:
+reporting has to be used for a while before anything acts on it.
+
+Coverage is stated per source rather than as one number, because launchd, cron and systemd disagree
+about where truth lives and who may read them, and one figure across three sources of different
+reliability is a denominator made of parts that do not agree.
+
+**A schedule that exists and a schedule that is enabled are different facts**, and a schedule whose
+state could not be read is a third. It reports whichever it has and never folds one into another. A
+scheduled command that names no absolute path yields nothing rather than a guess, because inventing
+one is how a registry starts matching text again.
+
 ## What is in scope, and it is a boundary rather than a filter
 
 AI processes, and terminal sessions those processes started. Nothing else.
@@ -132,6 +153,7 @@ had. This is for work you started and want to stop.
 | `rollcall list` | the same, said out loud |
 | `rollcall stop` | signal what it can attribute, verify each one, write a record |
 | `rollcall stop --dry-run` | what `stop` would signal, without signalling it |
+| `rollcall schedules` | what will start later: launchd, cron, systemd timers. Reads only |
 | `--registry <file>` | use your own signatures instead of the built-in ones |
 | `--json` | machine-readable, for either verb |
 

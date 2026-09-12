@@ -207,3 +207,63 @@ export function wrap(text, width = 88, indent = "") {
   if (line) lines.push(line);
   return lines.map((l) => indent + l).join("\n");
 }
+
+
+/**
+ * What will run later, per source.
+ *
+ * Deliberately not folded into `list`. A process table and a set of schedules are read from
+ * different places with different reliability, and one figure across the three sources here would
+ * be a denominator made of parts that do not agree — which is the thing this family of tools
+ * exists to refuse.
+ */
+export function formatSchedules(result, signatures) {
+  const out = [];
+  const recognised = [];
+
+  for (const source of result.sources) {
+    if (!source.available) {
+      out.push(`${source.label} — not read: ${source.why}`);
+      out.push("");
+      continue;
+    }
+    const named = source.entries.filter((e) => e.matched);
+    recognised.push(...named);
+    out.push(
+      `${source.label} — ${plural(source.entries.length, "schedule", "schedules")} read` +
+        (source.why ? `, and ${source.why}` : ""),
+    );
+    for (const item of named) {
+      // Exists and enabled are separate facts, and unknown is a third. None is folded into another.
+      const state =
+        item.enabled === true ? "enabled" : item.enabled === false ? "present but disabled" : "present, enabled state unknown";
+      out.push(`  · ${item.label} — ${item.id}`);
+      out.push(`      ${state}; ${item.where}`);
+    }
+    const unattributable = source.entries.filter((e) => !e.matched && !e.program).length;
+    if (unattributable) {
+      out.push(
+        wrap(
+          `  ${plural(unattributable, "schedule states", "schedules state")} no executable path this could read, so no signature can be applied to ${unattributable === 1 ? "it" : "them"}.`,
+          86,
+        ),
+      );
+    }
+    out.push("");
+  }
+
+  if (!recognised.length) {
+    out.push(`No schedule read here names a program these ${plural(count(signatures), "signature", "signatures")} recognise.`);
+    out.push("");
+  }
+
+  out.push(
+    wrap(
+      "This reads schedules and changes none of them. Not looked for: anything scheduled on another " +
+        "machine, anything a running process may schedule later, and any program these signatures " +
+        "do not name.",
+      88,
+    ),
+  );
+  return `${out.join("\n")}\n`;
+}

@@ -1,5 +1,18 @@
 # 0.1.0
 
+**`rollcall schedules` reads work that has not started yet** — launchd agents and daemons, your
+crontab, systemd timers. Reads only; disabling is reversible and stays out until reporting has been
+used for a while.
+
+Coverage per source rather than one number, because the three disagree about where truth lives and
+who may read them. **Existing and enabled are separate facts and unknown is a third**, so a job
+present but not loaded reports as unknown rather than as enabled. A scheduled command that names no
+absolute path yields nothing rather than a guess.
+
+Both of those decisions are tested directly rather than through the machine, because a mutation
+that coerced unknown to a boolean passed every test that read the real launchd directory, and the
+crontab parser was never executed at all on a machine with no crontab.
+
 **`stop` is tested by actually stopping things.** It runs in CI, where the machine is disposable by
 definition, against a registry the test supplies rather than the shipped one — a job that stops
 processes named by the real registry is a job that will one day stop something on a runner nobody

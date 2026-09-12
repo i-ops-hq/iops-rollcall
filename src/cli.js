@@ -8,9 +8,10 @@
 
 import { attribute } from "./attribute.js";
 import { readTable, tableGaps } from "./ps.js";
-import { formatList, formatStop, wrap } from "./report.js";
+import { formatList, formatSchedules, formatStop, wrap } from "./report.js";
 import { mostRecentRecord, writeRecord } from "./record.js";
-import { CHECKED_ON, SIGNATURES, loadSignatures } from "./registry.js";
+import { CHECKED_ON, SIGNATURES, loadSignatures, signatureFor } from "./registry.js";
+import { readSchedules } from "./schedules.js";
 import { descendantsOf, plan, stopPids } from "./stop.js";
 
 const HELP = `rollcall — every AI process on this machine, and what a stop could not reach
@@ -18,6 +19,7 @@ const HELP = `rollcall — every AI process on this machine, and what a stop cou
   rollcall              list what is running (the default; reads only)
   rollcall list         the same, said out loud
   rollcall stop         signal what it can attribute, verify each one, write a record
+  rollcall schedules    what will start later: launchd, cron, systemd timers. Reads only
   rollcall stop --dry-run   what stop would signal, without signalling it
   rollcall --json       machine-readable, for either verb
   rollcall --registry <file>  use your own signatures instead of the built-in ones
@@ -64,9 +66,36 @@ async function main(argv) {
     process.stdout.write(`${pkg.version}\n`);
     return 0;
   }
-  if (verb !== "list" && verb !== "stop") {
+  if (verb !== "list" && verb !== "stop" && verb !== "schedules") {
     process.stderr.write(`rollcall: no verb called ${verb}. Try \`rollcall --help\`.\n`);
     return 2;
+  }
+
+  if (verb === "schedules") {
+    let signatures = SIGNATURES;
+    if (registry) {
+      try {
+        signatures = loadSignatures(registry);
+      } catch (err) {
+        process.stderr.write(`rollcall: ${err.message}\n`);
+        return 2;
+      }
+    }
+    const result = readSchedules();
+    for (const source of result.sources) {
+      for (const item of source.entries) {
+        const sig = item.program ? signatureFor(item.program, signatures) : null;
+        item.matched = Boolean(sig);
+        item.label = sig ? sig.label : "";
+      }
+    }
+    const named = result.sources.flatMap((s) => s.entries.filter((e) => e.matched));
+    process.stdout.write(
+      asJsonEarly(flags)
+        ? `${JSON.stringify({ verb: "schedules", sources: result.sources }, null, 2)}\n`
+        : formatSchedules(result, signatures),
+    );
+    return named.length ? 1 : 0;
   }
 
   let rows;
@@ -152,6 +181,8 @@ async function main(argv) {
 
   return result.survived.length || result.refused.length || reportOnly.length ? 1 : 0;
 }
+
+const asJsonEarly = (flags) => flags.has("--json");
 
 const brief = (p) => ({ pid: p.pid, label: p.label, comm: p.comm, mayRestart: Boolean(p.mayRestart) });
 
