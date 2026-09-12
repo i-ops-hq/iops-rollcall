@@ -7,24 +7,34 @@ refused by npm as too similar to an existing `roll-call`, which is worth saying 
 leaving as a puzzle — and `iops-rooms` already uses the same shape.
 
 ```bash
-npx iops-rollcall@0.1.0
+npx iops-rollcall@0.1.1
 ```
 
-Zero dependencies. Check that before you run it, in one command:
+Zero dependencies. Check it rather than believe it:
 
 ```bash
-npm view iops-rollcall dependencies
+npm i iops-rollcall@0.1.1 && npm ls
+```
+```
+your-project@1.0.0
+`-- iops-rollcall@0.1.1
 ```
 
-It returns `{}`. This tool exists partly because of dependency-level attacks through npm, so
-shipping on npm is only defensible if you can verify that claim before running anything. **The
-version is pinned in every example on this page on purpose** — a bare `npx rollcall` resolves
-whatever was published most recently, at run time, which is the attack shape this is about.
+Nothing beneath it. That is the whole tree.
+
+**`npm view iops-rollcall dependencies` prints nothing at all**, which looks like a failed command
+and is not — npm omits the field entirely when a package has none, so blank *is* the answer. It is
+a poor way to learn something, which is why the check above is the one on this page.
+
+This tool exists partly because of dependency-level attacks through npm, so shipping on npm is only
+defensible if you can verify that claim before you run anything. **The version is pinned in every
+example here on purpose**: a bare `npx iops-rollcall` resolves whatever was published most recently,
+at run time, which is the attack shape this is about.
 
 ## What a first run looks like
 
 ```
-$ npx iops-rollcall@0.1.0
+$ npx iops-rollcall@0.1.1
 
 22 processes matched, of 599 running — 1 application and 5 others.
 
@@ -50,8 +60,8 @@ everyday reason this exists, and it needs no incident.
 ## Stopping
 
 ```bash
-npx iops-rollcall@0.1.0 stop --dry-run   # what it would signal
-npx iops-rollcall@0.1.0 stop             # signal it, verify each one, write a record
+npx iops-rollcall@0.1.1 stop --dry-run   # what it would signal
+npx iops-rollcall@0.1.1 stop             # signal it, verify each one, write a record
 ```
 
 No confirmation prompt. A switch that asks *are you sure* during an incident is broken, and the
@@ -77,7 +87,7 @@ A process list answers what is running. It says nothing about the launchd agent 
 agent at login, or the timer that will run one at three in the morning.
 
 ```bash
-npx iops-rollcall@0.1.0 schedules
+npx iops-rollcall@0.1.1 schedules
 ```
 
 **It reads and changes nothing.** Disabling a schedule is reversible and is deliberately not here:
@@ -132,7 +142,7 @@ The gap is stated rather than closed with guesses. Open an issue with the output
 You can also point it at your own list without waiting for that:
 
 ```bash
-npx iops-rollcall@0.1.0 --registry ./my-agents.json
+npx iops-rollcall@0.1.1 --registry ./my-agents.json
 ```
 
 A file is an array of rows in the same shape as the built-in ones, and it goes through the same

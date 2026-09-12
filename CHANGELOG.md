@@ -1,3 +1,16 @@
+# 0.1.1
+
+**The command this README told you to run to check the zero-dependency claim printed nothing.**
+`npm view iops-rollcall dependencies` returns zero bytes rather than `{}`, because npm omits the
+field entirely when a package has none — so a reader following the instruction saw a blank line and
+could not tell a working command from a broken one. Silence read as success, in the README, about
+the one property the page leads with.
+
+Replaced with `npm i iops-rollcall@0.1.1 && npm ls`, which prints the package with nothing beneath
+it, and the old behaviour is explained rather than left as a puzzle.
+
+Found by running the published package the way a stranger would rather than by re-reading the file.
+
 # 0.1.0
 
 Published by hand as `iops-rollcall`, because npm refuses the bare `rollcall` as too similar to an

@@ -30,8 +30,12 @@ Both have a control in `test/`, written before the code they guard.
 
 ## Zero dependencies, and why that is a security property here
 
-`npm view iops-rollcall dependencies` returns `{}`. A tool that exists partly because of dependency-level
-attacks cannot ask you to audit a dependency tree before you trust it. Everything it uses is the
+`npm i iops-rollcall@0.1.1 && npm ls` shows the package with nothing beneath it. A tool that exists
+partly because of dependency-level attacks cannot ask you to audit a dependency tree before you
+trust it.
+
+(`npm view iops-rollcall dependencies` prints nothing rather than `{}`, because npm omits the field
+when a package has none. Blank is the answer there, which is a poor way to learn it.) Everything it uses is the
 Node standard library: `child_process.execFileSync` to read `/bin/ps`, and `process.kill` to signal
 and to check existence.
 
