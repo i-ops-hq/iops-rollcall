@@ -69,6 +69,16 @@ export function enabledState({ disabled, loaded }) {
  * trust, and inventing a path from them is how a registry starts matching text again — which is
  * the defect the whole registry design exists to avoid.
  */
+/**
+ * systemctl is-enabled says more than yes and no: static, masked, indirect, generated, transient.
+ * Mapping all of those onto a boolean invents a fact, so only the two unambiguous ones are answered.
+ */
+export function enabledFromSystemctl(word) {
+  if (word === "enabled" || word === "enabled-runtime") return true;
+  if (word === "disabled" || word === "masked" || word === "masked-runtime") return false;
+  return null;
+}
+
 export function programFromCommand(command) {
   const first = String(command || "").trim().split(/\s+/)[0] || "";
   return first.startsWith("/") ? first : "";
@@ -200,16 +210,23 @@ function systemdTimers() {
       if (!unit) continue;
       const service = unit.replace(/\.timer$/, ".service");
       const exec = tryExec("/usr/bin/systemctl", [...scope, "show", service, "--property=ExecStart", "--value"]);
-      const path = (exec || "").match(/path=(\S+)/);
+      // Through the same gate as a cron command, and it was not: `ExecStart` on a real runner
+      // yielded `systemd-tmpfiles` from a `path=` capture, and the systemd branch accepted it
+      // because only the cron branch checked. One rule, applied in one place, or it is not a rule.
+      const captured = (exec || "").match(/path=(\S+)/);
+      const program = programFromCommand(captured ? captured[1] : "");
       const enabled = tryExec("/usr/bin/systemctl", [...scope, "is-enabled", unit]);
       source.entries.push(
         entry({
           id: unit,
           where: `systemd, ${label}`,
-          program: path ? path[1] : "",
+          program,
           command: (exec || "").trim(),
-          enabled: enabled === null ? null : enabled.trim() === "enabled",
-          note: path ? "" : "the unit states no executable path this could read",
+          // is-enabled prints static, masked, indirect and others. Only "enabled" is enabled, and
+          // only "disabled" or "masked" is off; everything else is a state this does not model, so
+          // it is unknown rather than guessed.
+          enabled: enabled === null ? null : enabledFromSystemctl(enabled.trim()),
+          note: program ? "" : "the unit states no executable path this could read",
         }),
       );
     }

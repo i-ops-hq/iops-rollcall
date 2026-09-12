@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { enabledState, programFromCommand, readSchedules } from "../src/schedules.js";
+import { enabledFromSystemctl, enabledState, programFromCommand, readSchedules } from "../src/schedules.js";
 import { formatSchedules } from "../src/report.js";
 
 const run = promisify(execFile);
@@ -139,4 +139,18 @@ test("a scheduled command yields a path or nothing, never a guess", () => {
   assert.equal(programFromCommand("~/bin/thing"), "", "an unexpanded home is not a path");
   assert.equal(programFromCommand(""), "");
   assert.equal(programFromCommand(undefined), "");
+});
+
+test("systemctl says more than enabled and disabled, and the rest is unknown", () => {
+  // A real Linux runner returned `systemd-tmpfiles` from an ExecStart capture and the systemd
+  // branch accepted it, because only the cron branch checked for an absolute path. One rule
+  // applied in one place is not a rule, and the general test caught it.
+  assert.equal(enabledFromSystemctl("enabled"), true);
+  assert.equal(enabledFromSystemctl("enabled-runtime"), true);
+  assert.equal(enabledFromSystemctl("disabled"), false);
+  assert.equal(enabledFromSystemctl("masked"), false);
+  // States this does not model. Mapping them onto a boolean would invent a fact.
+  for (const word of ["static", "indirect", "generated", "transient", "alias", ""]) {
+    assert.equal(enabledFromSystemctl(word), null, word || "(empty)");
+  }
 });
