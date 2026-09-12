@@ -104,6 +104,16 @@ cover. Programs that could not be confirmed are listed below rather than added.
 The gap is stated rather than closed with guesses. Open an issue with the output of
 `ps -axo pid=,comm=` for the program you want covered and it can be added with a real path.
 
+You can also point it at your own list without waiting for that:
+
+```bash
+npx rollcall@0.1.0 --registry ./my-agents.json
+```
+
+A file is an array of rows in the same shape as the built-in ones, and it goes through the same
+constructor — so it still cannot be a bare substring, still needs a worked example it matches and
+at least one case it must not, and still fails loudly rather than matching nothing quietly.
+
 ## What it will not say
 
 It reports what is running and what it could not reach. It does not tell you whether any of it
@@ -122,6 +132,7 @@ had. This is for work you started and want to stop.
 | `rollcall list` | the same, said out loud |
 | `rollcall stop` | signal what it can attribute, verify each one, write a record |
 | `rollcall stop --dry-run` | what `stop` would signal, without signalling it |
+| `--registry <file>` | use your own signatures instead of the built-in ones |
 | `--json` | machine-readable, for either verb |
 
 Exit `0` when everything it recognised is stopped or nothing was found, `1` when something is still

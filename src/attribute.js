@@ -6,7 +6,7 @@
 // executable is identical either way. That boundary is what makes a destructive verb trustworthy
 // enough to hold.
 
-import { SHELLS, signatureFor } from "./registry.js";
+import { SHELLS, SIGNATURES, signatureFor } from "./registry.js";
 
 /** Ancestry walks are bounded twice, and the bound is not redundant. See `ancestryOf`. */
 const MAX_DEPTH = 64;
@@ -51,12 +51,12 @@ export function ancestryOf(pid, byPid) {
  * that asked, mid-sentence, and the report would never print. An excluded process is a process
  * still running, so it is reported as such rather than omitted.
  */
-export function attribute(rows, { self = process.pid } = {}) {
+export function attribute(rows, { self = process.pid, signatures = SIGNATURES } = {}) {
   const byPid = new Map(rows.map((r) => [r.pid, r]));
   const mine = new Set([self, ...ancestryOf(self, byPid).map((p) => p.pid)]);
 
   return rows.map((row) => {
-    const own = signatureFor(row.comm);
+    const own = signatureFor(row.comm, signatures);
     let signature = own;
     let viaAncestor = null;
 
@@ -65,7 +65,7 @@ export function attribute(rows, { self = process.pid } = {}) {
     if (!signature && isShell(row.comm)) {
       for (const ancestor of ancestryOf(row.pid, byPid)) {
         if (isShell(ancestor.comm)) continue;
-        const found = signatureFor(ancestor.comm);
+        const found = signatureFor(ancestor.comm, signatures);
         if (found) {
           signature = found;
           viaAncestor = ancestor.pid;

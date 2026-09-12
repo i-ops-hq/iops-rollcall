@@ -10,7 +10,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { attribute } from "../src/attribute.js";
-import { coverage, formatList, formatStop } from "../src/report.js";
+import { coverage, formatList, formatStop, share } from "../src/report.js";
 import { readTable, tableGaps } from "../src/ps.js";
 
 /** Verdicts this tool does not have, and advice it has no standing to give. */
@@ -83,4 +83,37 @@ test("an application is reported as surviving, and as able to start agents again
   );
   assert.match(text, /not signalled/);
   assert.match(text, /start agents again/, "a survivor that can respawn makes the count provisional");
+});
+
+test("no sentence claims a subset larger than the set it came from", () => {
+  // The general guard, after the specific one. Five occurrences of this shape across two codebases
+  // is enough to stop catching it by reading: any "N of them" in the output must be drawn from the
+  // same collection as the N before it, and `share` is what makes that structural rather than
+  // careful.
+  const rows = [
+    { pid: 1, comm: "", args: "x", shortName: "agetty", notMine: true },
+    { pid: 2, comm: "", args: "x", shortName: "agetty", notMine: true },
+    { pid: 3, comm: "", args: "x", shortName: "chronyd", notMine: false },
+    { pid: 4, comm: "", args: "[kthreadd]", kernelThread: true },
+    { pid: 5, comm: "/usr/bin/node", args: "node" },
+  ];
+  const text = coverage(tableGaps(rows)).replace(/\s+/g, " ");
+
+  const set = Number(text.match(/(\d+) processes report a name and no path/)?.[1]);
+  const subset = Number(text.match(/(\d+) of them belong to another user/)?.[1] ?? 0);
+  assert.equal(set, 3, "three processes have no path, however many distinct names they share");
+  assert.ok(subset <= set, `${subset} of them, out of ${set}`);
+  assert.equal(subset, 2);
+});
+
+test("share cannot produce a subset bigger than its set, whatever it is asked", () => {
+  const all = [{ a: 1 }, { a: 2 }, { a: 3 }];
+  for (const predicate of [() => true, () => false, (r) => r.a > 1]) {
+    const { total, part } = share(all, predicate);
+    assert.equal(total, 3);
+    assert.ok(part <= total);
+  }
+  // The degenerate inputs a caller will eventually hand it.
+  assert.deepEqual(share([], () => true), { total: 0, part: 0 });
+  assert.deepEqual(share(undefined, () => true), { total: 0, part: 0 });
 });

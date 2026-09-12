@@ -12,6 +12,7 @@
 // a test somebody might not have written. That caught a real bug immediately: a `~/` example never
 // reaches expansion, so every home-rooted row was silently matching nothing.
 
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 
 /** `~/x` is expanded on BOTH the pattern and its example, or the self-check is theatre. */
@@ -161,6 +162,32 @@ export const SIGNATURES = [
 ];
 
 /** The signature that claims a path, or null. First match wins; the list has no overlaps. */
-export function signatureFor(comm) {
-  return SIGNATURES.find((sig) => sig.matches(comm)) || null;
+export function signatureFor(comm, signatures = SIGNATURES) {
+  return signatures.find((sig) => sig.matches(comm)) || null;
+}
+
+/**
+ * A registry read from a JSON file, for an agent this does not ship a signature for.
+ *
+ * Rows go through the same constructor as the shipped ones, so a file cannot loosen the rules the
+ * built-in list follows: every row still needs a worked example it matches and at least one case
+ * it must not, still cannot be a bare substring, and still fails loudly rather than matching
+ * nothing quietly.
+ *
+ * It is also what lets the destructive path be tested without ever pointing CI at the real list.
+ * A CI job that stops processes named by the shipped registry is a job that will one day stop
+ * something on a runner nobody expected.
+ */
+export function loadSignatures(path) {
+  let raw;
+  try {
+    raw = JSON.parse(readFileSync(path, "utf8"));
+  } catch (err) {
+    throw new Error(`registry at ${path} could not be read: ${err.message}`);
+  }
+  const rows = Array.isArray(raw) ? raw : raw && raw.signatures;
+  if (!Array.isArray(rows) || !rows.length) {
+    throw new Error(`registry at ${path} holds no signatures`);
+  }
+  return rows.map((row) => new Signature(row));
 }

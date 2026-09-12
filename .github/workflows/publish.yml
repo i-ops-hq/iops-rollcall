@@ -1,0 +1,78 @@
+name: publish
+
+# RELEASING: package.json is the version. The tag only triggers, and it must agree.
+#   1. bump "version" in package.json   2. add the CHANGELOG heading
+#   3. commit                           4. git tag v<X.Y.Z> && git push origin v<X.Y.Z>
+#
+# The first publish needs NPM_TOKEN, because npm's trusted publishing can only be configured for a
+# package that already exists — it has no pending-publisher equivalent to PyPI's. Once 0.1.0 is on
+# the registry, add a trusted publisher on npmjs.com for this repo and this workflow, delete the
+# secret, and delete the two token lines below. The npm CLI prefers OIDC when it finds it.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      # Provenance: a signed, verifiable link from the published tarball back to the commit that
+      # produced it. It is the one part of "audit it yourself" a reader cannot check by reading, so
+      # it is attested rather than asserted — and it is why this publishes from CI and never from a
+      # laptop, which cannot generate it.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: The tag must agree with package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME would publish $VERSION. package.json is the version; the tag only triggers."
+            exit 1
+          fi
+          echo "publishing $VERSION"
+
+      - name: Zero dependencies, checked before it ships rather than claimed after
+        run: |
+          node -e "
+            const p = require('./package.json');
+            const n = Object.keys(p.dependencies || {}).length;
+            if (n) { console.error(n + ' dependencies declared; this ships zero'); process.exit(1); }
+          "
+
+      - run: node --test test/*.test.js
+
+      - name: The README pins the version it tells people to run
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if ! grep -q "rollcall@$VERSION" README.md; then
+            echo "::error::README does not pin rollcall@$VERSION. A bare npx resolves whatever was published last, at run time, which is the attack shape this tool is about."
+            exit 1
+          fi
+
+      - name: Already on the registry?
+        id: published
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "rollcall@$VERSION" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "rollcall@$VERSION is already published; nothing to do."
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish with provenance
+        if: steps.published.outputs.already == 'false'
+        run: npm publish --provenance --access public
+        env:
+          # Delete this and the secret once a trusted publisher is configured on npmjs.com.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

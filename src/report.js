@@ -12,7 +12,27 @@
 
 import { CHECKED_ON, SIGNATURES } from "./registry.js";
 
+/** How many signatures a run used. Passed in, because --registry means it is not always ours. */
+const count = (signatures) => (signatures || SIGNATURES).length;
+
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * A set and a subset of it, derived from one collection in one expression.
+ *
+ * This exists because the same defect has now been caught in five places across two codebases: a
+ * number and the words beside it counting different things. Here it was "26 processes report a
+ * name and no path ... 29 of them belong to another user" — a subset larger than its set, because
+ * one number counted deduplicated names and the other counted rows.
+ *
+ * Passing two numbers in is what makes that possible, so this takes the collection instead. The
+ * subset cannot exceed the set because both are `all`, filtered or not, and there is no argument
+ * a caller can get wrong.
+ */
+export function share(all, isInSubset) {
+  const rows = all || [];
+  return { total: rows.length, part: rows.filter(isInSubset).length };
+}
 
 function line(proc) {
   const via = proc.viaAncestor ? ` (started by pid ${proc.viaAncestor})` : "";
@@ -48,12 +68,12 @@ function groupApps(found) {
 }
 
 /** The read-only verb. Names everyone present. */
-export function formatList(attributed, gaps) {
+export function formatList(attributed, gaps, signatures) {
   const found = attributed.filter((p) => p.matched);
   const out = [];
 
   if (!found.length) {
-    out.push(`No processes here match the ${SIGNATURES.length} signatures this carries.`);
+    out.push(`No processes here match the ${plural(count(signatures), "signature", "signatures")} this carries.`);
   } else {
     const { apps, rest } = groupApps(found);
     out.push(
@@ -77,22 +97,32 @@ export function formatList(attributed, gaps) {
   }
 
   out.push("");
-  out.push(coverage(gaps));
+  out.push(coverage(gaps, signatures));
   return `${out.join("\n")}\n`;
 }
 
 /** The stop verb. The count and its caveats travel together. */
-export function formatStop(result, gaps, recordPath) {
+export function formatStop(result, gaps, recordPath, signatures, previous) {
   const out = [];
   const { stopped, survived, refused, reportOnly, excluded, alreadyGone } = result;
 
   if (!stopped.length && !survived.length && !refused.length && !reportOnly.length) {
-    // "0 found" reads as nothing was ever here. That is a different sentence from this one.
-    out.push(
-      alreadyGone.length
-        ? `Nothing here that was not already stopped. ${plural(alreadyGone.length, "process", "processes")} had exited before this ran.`
-        : `No processes here match the ${SIGNATURES.length} signatures this carries.`,
-    );
+    // "Nothing found" is accurate and still reads as *nothing was ever here*, which is a different
+    // fact from *it is already stopped*. The process table cannot tell them apart — by now those
+    // processes are not in it — so the answer comes from the last record, which is the reason this
+    // tool writes one.
+    if (alreadyGone.length) {
+      out.push(
+        `Nothing here that was not already stopped. ${plural(alreadyGone.length, "process", "processes")} had exited before this ran.`,
+      );
+    } else if (previous && Array.isArray(previous.stopped) && previous.stopped.length) {
+      out.push(
+        `Nothing running that these signatures name. The last stop, ${previous.at}, took ` +
+          `${plural(previous.stopped.length, "process", "processes")}.`,
+      );
+    } else {
+      out.push(`No processes here match the ${plural(count(signatures), "signature", "signatures")} this carries.`);
+    }
   } else {
     out.push(`${plural(stopped.length, "process", "processes")} stopped and verified gone.`);
   }
@@ -126,7 +156,7 @@ export function formatStop(result, gaps, recordPath) {
     out.push(`Written to ${recordPath}`);
     out.push("");
   }
-  out.push(coverage(gaps));
+  out.push(coverage(gaps, signatures));
   return `${out.join("\n")}\n`;
 }
 
@@ -134,9 +164,9 @@ export function formatStop(result, gaps, recordPath) {
  * What was not looked for. Counted from this machine on this run, never a figure from elsewhere:
  * a tool that hardcodes another machine's ceiling is making a claim it did not check.
  */
-export function coverage(gaps) {
+export function coverage(gaps, signatures) {
   const bits = [
-    `Read ${gaps.total} processes against ${SIGNATURES.length} signatures, last checked on a real machine ${CHECKED_ON}.`,
+    `Read ${gaps.total} processes against ${plural(count(signatures), "signature", "signatures")}, last checked on a real machine ${CHECKED_ON}.`,
   ];
   if (gaps.kernelThreads) {
     bits.push(
@@ -144,13 +174,13 @@ export function coverage(gaps) {
     );
   }
   if (gaps.noPath.length) {
-    const count = gaps.noPathCount ?? gaps.noPath.length;
-    const why = gaps.notMine
-      ? ` ${gaps.notMine} of them belong to another user, whose executable this cannot read.`
-      : "";
+    // Both numbers out of one call, so the sentence cannot contradict itself.
+    const { total, part } = share(gaps.unresolved || [], (r) => r.notMine);
+    const n = total || gaps.noPathCount || gaps.noPath.length;
+    const why = part ? ` ${part} of them belong to another user, whose executable this cannot read.` : "";
     bits.push(
-      `${plural(count, "process reports", "processes report")} a name and no path, so no signature ` +
-        `can be applied to ${count === 1 ? "it" : "them"}, including ` +
+      `${plural(n, "process reports", "processes report")} a name and no path, so no signature ` +
+        `can be applied to ${n === 1 ? "it" : "them"}, including ` +
         `${gaps.noPath.slice(0, 4).join(", ")}${gaps.noPath.length > 4 ? " and others" : ""}.${why}`,
     );
   }

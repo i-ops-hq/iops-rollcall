@@ -9,8 +9,8 @@
 import { attribute } from "./attribute.js";
 import { readTable, tableGaps } from "./ps.js";
 import { formatList, formatStop, wrap } from "./report.js";
-import { writeRecord } from "./record.js";
-import { CHECKED_ON, SIGNATURES } from "./registry.js";
+import { mostRecentRecord, writeRecord } from "./record.js";
+import { CHECKED_ON, SIGNATURES, loadSignatures } from "./registry.js";
 import { descendantsOf, plan, stopPids } from "./stop.js";
 
 const HELP = `rollcall — every AI process on this machine, and what a stop could not reach
@@ -20,6 +20,7 @@ const HELP = `rollcall — every AI process on this machine, and what a stop cou
   rollcall stop         signal what it can attribute, verify each one, write a record
   rollcall stop --dry-run   what stop would signal, without signalling it
   rollcall --json       machine-readable, for either verb
+  rollcall --registry <file>  use your own signatures instead of the built-in ones
   rollcall --version
 
 It matches the executable path of a process against ${SIGNATURES.length} signatures, last checked on
@@ -33,13 +34,26 @@ It reports what is running. It does not say whether any of it should be.
 `;
 
 function parse(argv) {
-  const flags = new Set(argv.filter((a) => a.startsWith("-")));
-  const words = argv.filter((a) => !a.startsWith("-"));
-  return { verb: words[0] || "list", flags };
+  const flags = new Set();
+  const words = [];
+  let registry = "";
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--registry") {
+      registry = argv[++i] || "";
+    } else if (arg.startsWith("--registry=")) {
+      registry = arg.slice("--registry=".length);
+    } else if (arg.startsWith("-")) {
+      flags.add(arg);
+    } else {
+      words.push(arg);
+    }
+  }
+  return { verb: words[0] || "list", flags, registry };
 }
 
 async function main(argv) {
-  const { verb, flags } = parse(argv);
+  const { verb, flags, registry } = parse(argv);
   if (flags.has("--help") || flags.has("-h") || verb === "help") {
     process.stdout.write(HELP);
     return 0;
@@ -63,14 +77,23 @@ async function main(argv) {
     return 2;
   }
   const gaps = tableGaps(rows);
-  const attributed = attribute(rows);
+  let signatures = SIGNATURES;
+  if (registry) {
+    try {
+      signatures = loadSignatures(registry);
+    } catch (err) {
+      process.stderr.write(`rollcall: ${err.message}\n`);
+      return 2;
+    }
+  }
+  const attributed = attribute(rows, { signatures });
   const asJson = flags.has("--json");
 
   if (verb === "list") {
     process.stdout.write(
       asJson
-        ? `${JSON.stringify({ verb: "list", ...summary(attributed, gaps) }, null, 2)}\n`
-        : formatList(attributed, gaps),
+        ? `${JSON.stringify({ verb: "list", ...summary(attributed, gaps, signatures) }, null, 2)}\n`
+        : formatList(attributed, gaps, signatures),
     );
     return 0;
   }
@@ -95,6 +118,8 @@ async function main(argv) {
     return would.length ? 1 : 0;
   }
 
+  // Read before this run writes its own, or the answer is always "you just stopped these".
+  const previous = mostRecentRecord();
   const outcome = await stopPids([...targets.keys()]);
   const byPid = (pids) => pids.map((pid) => targets.get(pid) || { pid, label: "unknown" });
   const result = {
@@ -109,7 +134,7 @@ async function main(argv) {
   // Written before it is printed, because the terminal is not a record.
   const record = writeRecord({
     at: new Date().toISOString(),
-    ...summary(attributed, gaps),
+    ...summary(attributed, gaps, signatures),
     stopped: result.stopped.map(brief),
     survived: result.survived.map(brief),
     refused: result.refused.map(brief),
@@ -120,8 +145,8 @@ async function main(argv) {
 
   process.stdout.write(
     asJson
-      ? `${JSON.stringify({ verb: "stop", record: record.path, ...summary(attributed, gaps), stopped: result.stopped.map(brief), survived: result.survived.map(brief), refused: result.refused.map(brief), reportedNotSignalled: reportOnly.map(brief) }, null, 2)}\n`
-      : formatStop(result, gaps, record.path),
+      ? `${JSON.stringify({ verb: "stop", record: record.path, ...summary(attributed, gaps, signatures), stopped: result.stopped.map(brief), survived: result.survived.map(brief), refused: result.refused.map(brief), reportedNotSignalled: reportOnly.map(brief) }, null, 2)}\n`
+      : formatStop(result, gaps, record.path, signatures, previous),
   );
   if (record.error) process.stderr.write(`rollcall: the record could not be written: ${record.error}\n`);
 
@@ -130,10 +155,10 @@ async function main(argv) {
 
 const brief = (p) => ({ pid: p.pid, label: p.label, comm: p.comm, mayRestart: Boolean(p.mayRestart) });
 
-function summary(attributed, gaps) {
+function summary(attributed, gaps, signatures = SIGNATURES) {
   return {
     processesRead: gaps.total,
-    signatures: SIGNATURES.length,
+    signatures: signatures.length,
     signaturesCheckedOn: CHECKED_ON,
     matched: attributed.filter((p) => p.matched).map(brief),
     reportsNameWithoutPath: gaps.noPath,

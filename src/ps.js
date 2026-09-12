@@ -153,14 +153,17 @@ export function tableGaps(rows) {
   const noPath = unresolved.map((r) => r.comm || r.shortName);
   const noComm = rows.filter((r) => !r.comm && !r.shortName && !r.kernelThread).map((r) => r.pid);
   const kernelThreads = rows.filter((r) => r.kernelThread).length;
-  const notMine = rows.filter((r) => r.notMine).length;
   return {
     total: rows.length,
+    // The ROWS, not a count of them. Two numbers in one sentence must be drawn from one collection
+    // in one expression, and handing the report a pre-computed pair is how they came apart the
+    // first time: "26 processes report a name and no path ... 29 of them belong to another user".
+    unresolved,
     //: how many processes, and a sample of what they are called. Two different questions.
     noPathCount: unresolved.length,
     noPath: [...new Set(noPath)].sort(),
     noComm,
-    notMine,
+    notMine: unresolved.filter((r) => r.notMine).length,
     // Counted apart: a kernel thread runs no executable, so it is not something this failed to
     // reach. Reported so the numbers add up rather than left out so they look better.
     kernelThreads,

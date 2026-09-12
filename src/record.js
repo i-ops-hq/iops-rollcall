@@ -5,7 +5,7 @@
 // not the number that was stopped; it is what survived, what was refused, and what was never
 // looked for at all.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -32,5 +32,32 @@ export function writeRecord(payload, { dir = defaultRecordDir(), now = new Date(
     return { path, error: "" };
   } catch (err) {
     return { path: "", error: String(err && err.message ? err.message : err) };
+  }
+}
+
+
+/**
+ * The newest record, if there is one. Read so a stop that finds nothing can tell the two cases
+ * apart.
+ *
+ * "Nothing found" after a stop is accurate and still reads as *nothing was ever here*, which is a
+ * different fact from *it is already stopped*. The distinction cannot be made from the process
+ * table, because by the second run the processes are not in it — so it comes from the record this
+ * tool already writes, which is the reason for writing one.
+ */
+export function mostRecentRecord(dir = defaultRecordDir()) {
+  let names;
+  try {
+    names = readdirSync(dir).filter((n) => n.startsWith("stop-") && n.endsWith(".json")).sort();
+  } catch {
+    return null;
+  }
+  const newest = names[names.length - 1];
+  if (!newest) return null;
+  try {
+    const path = join(dir, newest);
+    return { path, ...JSON.parse(readFileSync(path, "utf8")) };
+  } catch {
+    return null;
   }
 }
