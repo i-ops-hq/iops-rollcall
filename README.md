@@ -195,4 +195,19 @@ overstate the gap.
 
 Windows is not supported, and this says so rather than half-working there.
 
+## Contributing
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the two rules and the setup, which is `node --test
+test/*.test.js` and nothing else — no build step, no dependencies, and it stays that way.
+
+The registry is eight signatures and every path in it was confirmed on a Mac. **Confirming a Linux
+path is the most useful thing an outside contributor can do here**, because it needs a machine the
+maintainers do not have — see the
+[good first issues](https://github.com/i-ops-hq/iops-rollcall/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Pasting `ps -axo pid=,comm=` and `readlink -f /proc/<pid>/exe` for a program you want covered is
+enough on its own; someone else can add the row from that.
+
+Please do not guess a path. A guessed signature matches nothing, behind a test that proves nothing,
+in a report silently missing a program it claims to cover.
+
 Apache-2.0. Part of [I-Ops](https://i-ops.dev).

@@ -46,3 +46,11 @@ words, not even to disown them.
   file*, and the moment it consults something you cannot see, that claim is gone.
 - Advice. It reports what it found and what it could not reach.
 - Egress control, firewall rules, or the words "contained", "sandboxed" or "isolated".
+
+## Code of conduct
+
+Be decent. Disagree about the work, not about the person.
+
+The long form is [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — Contributor Covenant 2.1, verbatim.
+Conduct reports go to **hello@i-ops.dev**. That is a different channel from a vulnerability, which
+belongs in a [security advisory](https://github.com/i-ops-hq/iops-rollcall/security/advisories/new).
