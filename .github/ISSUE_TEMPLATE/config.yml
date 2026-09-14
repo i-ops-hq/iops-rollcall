@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security issue
+    url: https://github.com/i-ops-hq/iops-rollcall/blob/main/SECURITY.md
+    about: Please do not open a public issue for a vulnerability.
+  - name: Looking for somewhere to start
+    url: https://github.com/i-ops-hq/iops-rollcall/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
+    about: Confirming a Linux path needs no code and is the most useful thing an outsider can do.

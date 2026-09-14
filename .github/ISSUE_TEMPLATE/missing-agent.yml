@@ -1,0 +1,72 @@
+name: A program is not recognised
+description: Something is running and rollcall does not name it. Includes Linux paths.
+labels: ["enhancement", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The registry is eight signatures and **every path in it was confirmed on a Mac**. Confirming
+        one on Linux is the most useful thing an outside contributor can do here, because it needs a
+        machine the maintainers do not have.
+
+        **You do not need to write any code.** The two commands below are enough on their own —
+        somebody else can add the row from them.
+
+  - type: input
+    id: program
+    attributes:
+      label: Which program
+      placeholder: LM Studio, Windsurf, Continue, aider, …
+    validations:
+      required: true
+
+  - type: textarea
+    id: path
+    attributes:
+      label: Its executable path, from your own machine
+      description: >
+        **macOS:** `ps -axo pid=,comm=` gives the full path directly.
+
+        **Linux:** `ps` gives a truncated command *name*, not a path — `readlink -f /proc/<pid>/exe`
+        is the authoritative answer and the one we need.
+
+        Replace your username with `~` if you would rather not share it; the registry stores `~/`
+        and expands it at load, so that is the form it goes in as anyway.
+      render: shell
+      placeholder: |
+        $ ps -axo pid=,comm= | grep -i lmstudio
+        $ readlink -f /proc/12345/exe
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: Ubuntu 24.04 / macOS 15 / Fedora 41
+    validations:
+      required: true
+
+  - type: textarea
+    id: near-misses
+    attributes:
+      label: Anything nearby that must NOT match
+      description: >
+        A signature needs at least one `never` case, and it is required rather than encouraged. A
+        root match ends in `/` so it cannot swallow a neighbouring directory; the `never` case is
+        what proves it does not. A backup copy, an `-old` directory, a similarly named helper.
+      render: shell
+      placeholder: /opt/lmstudio-old/bin/lmstudio
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmed
+    attributes:
+      label: Please confirm
+      options:
+        - label: >
+            This path is one I read off a running process on my own machine, not one I guessed or
+            found in documentation. A guessed path is a signature matching nothing, behind a test
+            proving nothing, in a report silently missing a program it claims to cover.
+          required: true

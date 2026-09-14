@@ -1,0 +1,55 @@
+name: It said something wrong
+description: A wrong count, a false match, or a stop it reported but did not achieve.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two reports are wanted above all others, because they are the properties this tool must not
+        break:
+
+        1. **It must not signal what it did not name.** If you can make a signal reach a process
+          that was not reported, or attach a signature to something it should not match, that is the
+          report we most want.
+        2. **It must not report a stop it did not achieve.** If you can make it claim a process is
+          gone while the process is still running, likewise.
+
+  - type: textarea
+    id: command
+    attributes:
+      label: What you ran
+      render: shell
+      placeholder: npx iops-rollcall stop --dry-run
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: What it said
+      description: >
+        All of it, including the "Not looked for" paragraph and the line about processes that report
+        a name and no path. Those two sentences are the coverage statement.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: reality
+    attributes:
+      label: What was actually true
+      description: >
+        `ps -axo pid=,comm=` before and after is ideal. If this is about a stop, the useful evidence
+        is whether the pid was still alive afterwards.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Version and platform
+      description: "`npx iops-rollcall --version`, plus your OS. Windows is not supported and says so."
+      placeholder: iops-rollcall 0.1.2, macOS 15
+    validations:
+      required: true
