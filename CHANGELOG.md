@@ -1,3 +1,50 @@
+# 0.1.3
+
+**The registry is data now, and contributing a row no longer means editing JavaScript.**
+
+Eight signatures, every path confirmed by hand on one person's Mac, is a ceiling that does not move
+while anybody sleeps. The mechanism to load an outside list already existed — `--registry` — so what
+was missing was social rather than technical: somewhere for a row to live that is not source code,
+errors a hand-edited file can recover from, and a written standard for what evidence a new row must
+show.
+
+**`signatures.json` at the root of the package**, and the shipped rows load through exactly the same
+function `--registry` uses. One code path, so nothing built in can follow looser rules than
+something you write.
+
+**A malformed file names the row, the field, and what it wanted.** Unknown fields are refused rather
+than ignored, and checked *before* required ones — a typo'd `nver` reported only as "has no never"
+sends a reader to the right field and leaves them staring at a line that looks correct. Duplicate
+ids are refused too: first match wins, so the second would never fire.
+
+**Each row carries its own provenance** — `verified: { on, platform }` — instead of one constant
+beside the list. A registry that grows by contribution has rows of different ages checked on
+different machines, and a single date would speak for all of them on the authority of the oldest.
+The printed date is derived from the oldest row, because the weakest one speaks for the list.
+
+**The output says where the rows were confirmed, not only when.** Run it on a platform none of them
+was checked on and it says so:
+
+```
+Read 725 processes against 8 signatures, last checked on a real machine 2026-09-11.
+None of them was confirmed on linux — 8 on darwin. A path that is right on one
+system is usually wrong on another, so this list is shorter here than the count
+suggests.
+```
+
+That is the honest version of the macOS skew, which until now lived only in the README. A short
+result on an unfamiliar system otherwise reads as a quiet machine.
+
+**`CONTRIBUTING.md` states the evidence a pull request must show, as a gate** — the command output
+that produced the path, the platform, the OS version, how the program was installed — and how rows
+are trusted once there are more of them than one person checked.
+
+### A defect found while building it
+
+`signatures.json` was not in `package.json`'s `files`. The registry loads at import, so the
+published tarball would have thrown on `require` — every test passed locally because the file was
+sitting in the working tree. There is now a test asserting it ships.
+
 # 0.1.2
 
 **The first release published from CI, with a provenance attestation you can check** on the npm page

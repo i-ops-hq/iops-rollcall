@@ -10,7 +10,7 @@
 // denial from a claim is the substring bug moved from paths to English, so the output is written to
 // never need the words at all — not even to disown them.
 
-import { CHECKED_ON, SIGNATURES } from "./registry.js";
+import { CHECKED_ON, SIGNATURES, verifiedPlatforms } from "./registry.js";
 
 /** How many signatures a run used. Passed in, because --registry means it is not always ours. */
 const count = (signatures) => (signatures || SIGNATURES).length;
@@ -168,6 +168,25 @@ export function coverage(gaps, signatures) {
   const bits = [
     `Read ${gaps.total} processes against ${plural(count(signatures), "signature", "signatures")}, last checked on a real machine ${CHECKED_ON}.`,
   ];
+  // **Where the rows were confirmed, not just when.** Every signature carries the platform it was
+  // checked on, and saying so is the difference between "8 signatures" and "8 signatures, none of
+  // which was confirmed on the system you are running". A registry that is entirely macOS finds
+  // little on Linux, and a reader who is not told that reads a short list as a quiet machine.
+  const elsewhere = verifiedPlatforms(signatures).filter(([name]) => name !== process.platform);
+  const here = verifiedPlatforms(signatures).find(([name]) => name === process.platform);
+  if (elsewhere.length && !here) {
+    bits.push(
+      `None of them was confirmed on ${process.platform} — ` +
+        `${elsewhere.map(([name, n]) => `${n} on ${name}`).join(", ")}. ` +
+        "A path that is right on one system is usually wrong on another, so this list is shorter " +
+        "here than the count suggests.",
+    );
+  } else if (elsewhere.length && here) {
+    bits.push(
+      `${here[1]} of them were confirmed on ${process.platform}; ` +
+        `${elsewhere.map(([name, n]) => `${n} on ${name}`).join(", ")}.`,
+    );
+  }
   if (gaps.kernelThreads) {
     bits.push(
       `${gaps.kernelThreads} of those are kernel threads, which run no executable at all — not something this could not reach.`,

@@ -30,7 +30,7 @@ Both have a control in `test/`, written before the code they guard.
 
 ## Zero dependencies, and why that is a security property here
 
-`npm i iops-rollcall@0.1.2 && npm ls` shows the package with nothing beneath it. A tool that exists
+`npm i iops-rollcall@0.1.3 && npm ls` shows the package with nothing beneath it. A tool that exists
 partly because of dependency-level attacks cannot ask you to audit a dependency tree before you
 trust it.
 

@@ -8,18 +8,79 @@ rather than by reading. If you add a reader or a signal path, add a case to them
 
 ## Adding a signature
 
-The registry is data, and a row validates itself when it is built. It needs:
+Signatures live in [`signatures.json`](signatures.json) at the root of this package. **It is data,
+not code** — adding a program means adding a row, and the shipped set loads through exactly the same
+function `--registry` uses, so a contributed file is held to the same rules.
 
-- a **resolved executable path**, never a name fragment. A root match ends in `/`; a leaf match is a
-  bare basename.
-- a worked `example` the row must match.
-- at least one `never` case the row must not match. This is required, not encouraged.
+```json
+{
+  "id": "lmstudio",
+  "label": "LM Studio",
+  "kind": "root",
+  "path": "~/.lmstudio/",
+  "example": "~/.lmstudio/bin/lms",
+  "never": ["~/.lmstudio-backup/bin/lms"],
+  "verified": { "on": "2026-09-15", "platform": "linux" }
+}
+```
 
-**Confirm the path on a real machine before adding it.** A guessed path is a signature that matches
-nothing, behind a test that proves nothing, in a report silently missing a program it claims to
-cover. If you cannot confirm it, add it to the README's "not yet" table instead — a registry with
-eight verified rows and a stated gap is worth more than one with sixteen of which eight are guesses,
-and only one of those can be audited.
+| field | |
+|---|---|
+| `id` | short, stable, unique. Two rows sharing one are refused. |
+| `label` | what a reader sees. |
+| `kind` | `root` a directory prefix, `leaf` an exact basename, `app` a desktop application — reported and never signalled. |
+| `path` | a **resolved executable path**, never a name fragment. A root ends in `/`; a leaf is a bare basename. `~/` is expanded at load, so write `~/` rather than your own home directory. |
+| `example` | a real path this row must match. |
+| `never` | at least one near miss it must **not** match. Required, not encouraged. |
+| `verified` | when you confirmed it and on which platform. |
+| `mayRestart` | optional; true when something still running can undo the stop. |
+| `note` | optional; one clause a reader needs. |
+
+A row validates itself the moment it is built: it refuses to exist unless it matches its own
+`example` and matches none of its `never` cases. A malformed file names the row, the field and what
+it wanted, so you do not need to read this table to recover from a typo.
+
+### The evidence a pull request must show
+
+**This is a gate, not guidance.** A row without it will be asked for it.
+
+Paste the command output that produced the path, from your own machine:
+
+```bash
+# macOS — the full path comes straight out of ps
+ps -axo pid=,comm= | grep -i <program>
+
+# Linux — ps gives a truncated NAME, not a path. /proc is the authority.
+readlink -f /proc/<pid>/exe
+```
+
+And say which platform, which OS version, and how the program was installed — a Homebrew path and
+an AppImage path for the same tool are different rows.
+
+**Do not guess, and do not take a path from documentation.** A guessed path is a signature that
+matches nothing, behind a test that proves nothing, in a report silently missing a program it claims
+to cover. What a vendor documents and what its binary actually resolves to are frequently different.
+
+If you cannot confirm a path, **adding the program to the README's "not yet" table is a real
+contribution** and the one we would rather have. Eight verified rows with a stated gap are worth
+more than sixteen of which eight are guesses, because only one of those can be audited — and a
+reader has no way to tell which half they are looking at.
+
+### How rows are trusted, and by whom
+
+Worth stating plainly before there are many of them, because a registry that grows by contribution
+is something a reader has to trust differently from one person's list.
+
+- **Every row carries its own provenance.** `verified` records when and on what platform, per row
+  rather than per file, and the report prints the age of the **oldest** row — the weakest one speaks
+  for the list.
+- **The output says where the rows came from.** Running on a platform none of them was confirmed on,
+  it says so, because a short list on an unfamiliar system otherwise reads as a quiet machine.
+- **A maintainer merges on the evidence in the pull request**, not on the row looking plausible. If
+  the evidence is not there the row waits; nobody is expected to reproduce it on hardware they do
+  not have, which is the entire reason outside rows are wanted.
+- **Throughput is not the goal.** A registry that accepts rows faster than it verifies them is worse
+  than a small one, because it looks the same from outside and cannot be audited.
 
 ## Setup
 
