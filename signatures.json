@@ -1,0 +1,126 @@
+{
+  "$schema": "./signatures.schema.json",
+  "$comment": "What counts as an agent process, as data. Every path here was read off a running process on a real machine \u2014 never guessed, never taken from documentation. A guessed path is a signature that matches nothing, behind a test that proves nothing, in a report silently missing a program it claims to cover. See CONTRIBUTING.md for what a new row must show.",
+  "signatures": [
+    {
+      "id": "claude-desktop",
+      "label": "Claude",
+      "kind": "app",
+      "path": "/Applications/Claude.app/",
+      "example": "/Applications/Claude.app/Contents/MacOS/Claude",
+      "never": [
+        "/Applications/Claude.app-backup/Contents/MacOS/Claude",
+        "/Applications/ClaudeX.app/x"
+      ],
+      "mayRestart": true,
+      "note": "the desktop app; agent sessions run underneath it",
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    },
+    {
+      "id": "claude-code",
+      "label": "Claude Code",
+      "kind": "root",
+      "path": "~/Library/Application Support/Claude/claude-code/",
+      "example": "~/Library/Application Support/Claude/claude-code/2.1.260/claude.app/Contents/MacOS/claude",
+      "never": [
+        "~/Library/Application Support/Claude/claude-code-old/x"
+      ],
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    },
+    {
+      "id": "claude-cli",
+      "label": "Claude Code (CLI)",
+      "kind": "root",
+      "path": "~/.local/share/claude/",
+      "example": "~/.local/share/claude/versions/2.1.86",
+      "never": [
+        "~/.local/share/claude-experiments/x"
+      ],
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    },
+    {
+      "id": "cursor-app",
+      "label": "Cursor",
+      "kind": "app",
+      "path": "/Applications/Cursor.app/",
+      "example": "/Applications/Cursor.app/Contents/MacOS/Cursor",
+      "never": [
+        "/System/Library/PrivateFrameworks/TextInputUIMacHelper.framework/Versions/A/XPCServices/CursorUIViewService.xpc/Contents/MacOS/CursorUIViewService",
+        "/Applications/Cursor.app-old/Contents/MacOS/Cursor"
+      ],
+      "mayRestart": true,
+      "note": "the editor; the agent runs inside it",
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    },
+    {
+      "id": "cursor-agent",
+      "label": "Cursor Agent",
+      "kind": "root",
+      "path": "~/.local/share/cursor-agent/",
+      "example": "~/.local/share/cursor-agent/versions/2026.04.17-787b533/cursor-agent",
+      "never": [
+        "~/.local/share/cursor-agentx/y"
+      ],
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    },
+    {
+      "id": "codex",
+      "label": "Codex",
+      "kind": "root",
+      "path": "~/.codex/",
+      "example": "~/.codex/plugins/cache/openai-bundled/chrome/latest/extension-host/macos/arm64/ChatGPT for Chrome",
+      "never": [
+        "~/.codex-backup/x"
+      ],
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    },
+    {
+      "id": "ollama",
+      "label": "Ollama",
+      "kind": "leaf",
+      "path": "ollama",
+      "example": "/Applications/Ollama.app/Contents/Resources/ollama",
+      "never": [
+        "/usr/local/bin/ollama-helper",
+        "/opt/homebrew/bin/ollamad"
+      ],
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    },
+    {
+      "id": "llama-server",
+      "label": "llama-server",
+      "kind": "leaf",
+      "path": "llama-server",
+      "example": "~/Library/Application Support/I-Ops/engine/v0.30.7/llama-server",
+      "never": [
+        "/opt/homebrew/bin/llama-server-bench"
+      ],
+      "note": "a local inference server",
+      "verified": {
+        "on": "2026-09-11",
+        "platform": "darwin"
+      }
+    }
+  ]
+}

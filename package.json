@@ -1,6 +1,6 @@
 {
   "name": "iops-rollcall",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Every AI process running on this machine, and what a stop could not reach. Zero dependencies.",
   "type": "module",
   "bin": {
@@ -9,6 +9,7 @@
   },
   "files": [
     "src/",
+    "signatures.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
