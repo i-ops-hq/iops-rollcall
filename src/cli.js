@@ -4,8 +4,11 @@
 // Two verbs, both first class. `list` is the default and reads nothing but the process table.
 // `stop` acts, with no confirmation prompt: a switch that asks "are you sure" during an incident is
 // broken. The safety is in the targeting, not in a flag — it signals only what it can attribute to
-// a signature it carries, and it prints exactly what it did and what it could not do.
+// a signature it carries, and it prints exactly what it did and what it could not do. And in the
+// arguments: anything it does not understand is refused before the process table is read, because
+// without a prompt a misspelled --dry-run is otherwise the real thing (src/args.js).
 
+import { parse } from "./args.js";
 import { attribute } from "./attribute.js";
 import { readTable, tableGaps } from "./ps.js";
 import { formatList, formatSchedules, formatStop, wrap } from "./report.js";
@@ -35,27 +38,15 @@ them. A shell you opened yourself is never listed or stopped — only one an age
 It reports what is running. It does not say whether any of it should be.
 `;
 
-function parse(argv) {
-  const flags = new Set();
-  const words = [];
-  let registry = "";
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--registry") {
-      registry = argv[++i] || "";
-    } else if (arg.startsWith("--registry=")) {
-      registry = arg.slice("--registry=".length);
-    } else if (arg.startsWith("-")) {
-      flags.add(arg);
-    } else {
-      words.push(arg);
-    }
-  }
-  return { verb: words[0] || "list", flags, registry };
-}
-
 async function main(argv) {
-  const { verb, flags, registry } = parse(argv);
+  const parsed = parse(argv);
+  // Refused before anything is read: an argument this does not understand could be the preview
+  // flag spelled wrong, and `stop` has no confirmation to catch it later.
+  if (parsed.error) {
+    process.stderr.write(`${parsed.error}\n`);
+    return 2;
+  }
+  const { verb, flags, registry } = parsed;
   if (flags.has("--help") || flags.has("-h") || verb === "help") {
     process.stdout.write(HELP);
     return 0;
