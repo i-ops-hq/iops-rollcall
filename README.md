@@ -7,17 +7,17 @@ refused by npm as too similar to an existing `roll-call`, which is worth saying 
 leaving as a puzzle — and `iops-rooms` already uses the same shape.
 
 ```bash
-npx iops-rollcall@0.1.3
+npx iops-rollcall@0.1.4
 ```
 
 Zero dependencies. Check it rather than believe it:
 
 ```bash
-npm i iops-rollcall@0.1.3 && npm ls
+npm i iops-rollcall@0.1.4 && npm ls
 ```
 ```
 your-project@1.0.0
-`-- iops-rollcall@0.1.3
+`-- iops-rollcall@0.1.4
 ```
 
 Nothing beneath it. That is the whole tree.
@@ -34,7 +34,7 @@ at run time, which is the attack shape this is about.
 ## What a first run looks like
 
 ```
-$ npx iops-rollcall@0.1.3
+$ npx iops-rollcall@0.1.4
 
 22 processes matched, of 599 running — 1 application and 5 others.
 
@@ -60,8 +60,8 @@ everyday reason this exists, and it needs no incident.
 ## Stopping
 
 ```bash
-npx iops-rollcall@0.1.3 stop --dry-run   # what it would signal
-npx iops-rollcall@0.1.3 stop             # signal it, verify each one, write a record
+npx iops-rollcall@0.1.4 stop --dry-run   # what it would signal
+npx iops-rollcall@0.1.4 stop             # signal it, verify each one, write a record
 ```
 
 No confirmation prompt. A switch that asks *are you sure* during an incident is broken, and the
@@ -87,7 +87,7 @@ A process list answers what is running. It says nothing about the launchd agent 
 agent at login, or the timer that will run one at three in the morning.
 
 ```bash
-npx iops-rollcall@0.1.3 schedules
+npx iops-rollcall@0.1.4 schedules
 ```
 
 **It reads and changes nothing.** Disabling a schedule is reversible and is deliberately not here:
@@ -163,7 +163,7 @@ request must show, and how rows are trusted once there are more of them than one
 You can also point it at your own list without waiting for that:
 
 ```bash
-npx iops-rollcall@0.1.3 --registry ./my-agents.json
+npx iops-rollcall@0.1.4 --registry ./my-agents.json
 ```
 
 A file is an array of rows in the same shape as the built-in ones, and it goes through the same

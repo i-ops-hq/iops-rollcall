@@ -1,3 +1,27 @@
+# 0.1.4
+
+**A misspelled `--dry-run` no longer performs the stop.** Every unknown flag was kept and never
+looked at, so `rollcall stop --dry-rn`, one letter short of the preview, skipped the preview and
+signalled everything the registry matched. On the machine it was found on, that was Codex and three
+Claude Code processes. It was found by running the published package against a registry that
+matched nothing, which is the only safe way to find it.
+
+**Now anything rollcall does not understand is refused before the process table is read**, with
+the flag it probably meant and a line saying nothing was read or signalled:
+
+```
+$ rollcall stop --dry-rn
+rollcall: unknown flag --dry-rn. Did you mean --dry-run? Nothing was read or signalled. Try `rollcall --help`.
+```
+
+The same goes for a flag typed without its dashes, `rollcall stop dry-run`, which used to read
+"stop" and drop the rest. The same goes for `--registry` with its file forgotten, which fell back
+to the built-in signatures, so a stop meant for a custom list signalled everything the defaults
+match instead.
+
+`stop` still has no "are you sure", on purpose. That is why the argument check is where a typo has
+to be caught.
+
 # 0.1.3
 
 **The registry is data now, and contributing a row no longer means editing JavaScript.**
