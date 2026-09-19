@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { enabledFromSystemctl, enabledState, programFromCommand, readSchedules } from "../src/schedules.js";
+import { loadSignatures } from "../src/registry.js";
 import { formatSchedules } from "../src/report.js";
 
 const run = promisify(execFile);
@@ -77,6 +78,44 @@ test("it reads schedules and changes none of them", async () => {
   }
 });
 
+/**
+ * The registry row the next tests build from whatever this machine has scheduled, with a near miss
+ * that cannot fall inside it.
+ *
+ * The near miss used to be a fixed `/usr/bin/node`, which is inside the row's own root whenever the
+ * first scheduled program on the machine lives in /usr/bin. The registry then refuses the row for
+ * matching its own negative case, and the test fails on its fixture rather than on the code. On
+ * 2026-09-19 an Ubuntu runner failed it twice with empty output, which is what that refusal looks
+ * like, while every other job passed. A sibling of the root (`/usr/bin-near-miss/` for `/usr/bin/`)
+ * is outside it by construction, and a nearer miss than the old one.
+ */
+function fixtureRow(program) {
+  const root = program.slice(0, program.lastIndexOf("/") + 1);
+  return {
+    id: "fixture",
+    label: "Fixture",
+    kind: "root",
+    path: root,
+    example: program,
+    never: [`${root.slice(0, -1)}-near-miss/${program.slice(root.length)}`],
+  };
+}
+
+test("the fixture is a row the registry accepts, whatever directory the schedule names", () => {
+  // Checked here, against paths chosen on purpose, because the test below only ever sees whichever
+  // program this machine happens to schedule first.
+  const dir = mkdtempSync(join(tmpdir(), "rollcall-fixture-"));
+  try {
+    for (const program of ["/usr/bin/mandb", "/usr/sbin/logrotate", "/usr/lib/apt/apt.systemd.daily", "/opt/homebrew/bin/brew"]) {
+      const file = join(dir, "r.json");
+      writeFileSync(file, JSON.stringify([fixtureRow(program)]), "utf8");
+      assert.doesNotThrow(() => loadSignatures(file), `a schedule naming ${program} builds a row the registry refuses`);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("a schedule naming a recognised program is reported, and reporting is not a failure", async () => {
   const { sources } = readSchedules();
   const withProgram = sources.flatMap((s) => s.entries).find((e) => e.program);
@@ -84,17 +123,14 @@ test("a schedule naming a recognised program is reported, and reporting is not a
 
   const dir = mkdtempSync(join(tmpdir(), "rollcall-sched-"));
   const registry = join(dir, "r.json");
-  const root = withProgram.program.slice(0, withProgram.program.lastIndexOf("/") + 1);
-  writeFileSync(
-    registry,
-    JSON.stringify([
-      { id: "fixture", label: "Fixture", kind: "root", path: root, example: withProgram.program, never: ["/usr/bin/node"] },
-    ]),
-    "utf8",
-  );
+  writeFileSync(registry, JSON.stringify([fixtureRow(withProgram.program)]), "utf8");
   try {
     const result = await run(process.execPath, [CLI, "schedules", "--registry", registry]).catch((e) => e);
-    assert.match(String(result.stdout), /Fixture/, "the recognised schedule is named");
+    assert.match(
+      String(result.stdout),
+      /Fixture/,
+      `the recognised schedule (${withProgram.program}) is named; stderr said: ${String(result.stderr).trim() || "nothing"}`,
+    );
     assert.equal(result.code ?? 0, 0, "a read-only verb reports; it does not fail on what it read");
   } finally {
     rmSync(dir, { recursive: true, force: true });
